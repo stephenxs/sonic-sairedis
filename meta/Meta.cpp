@@ -2675,6 +2675,56 @@ sai_status_t Meta::bulkSet(
     return status;
 }
 
+sai_status_t Meta::bulkGet(
+        _In_ sai_object_type_t object_type,
+        _In_ uint32_t object_count,
+        _In_ const sai_object_id_t *object_id,
+        _In_ const uint32_t *attr_count,
+        _Inout_ sai_attribute_t **attr_list,
+        _In_ sai_bulk_op_error_mode_t mode,
+        _Out_ sai_status_t *object_statuses)
+{
+//    SWSS_LOG_NOTICE("SYNCD BULK GET Meta stub");
+#if 0
+    sai_status_t status = meta_sai_validate_oid(object_type, &object_id, SAI_NULL_OBJECT_ID, false);
+
+    if (status != SAI_STATUS_SUCCESS)
+    {
+        return status;
+    }
+
+    sai_object_meta_key_t meta_key = { .objecttype = object_type, .objectkey = { .key = { .object_id  = object_id } } };
+
+    status = meta_generic_validation_get(meta_key, attr_count, attr_list);
+
+    if (status != SAI_STATUS_SUCCESS)
+    {
+        return status;
+    }
+#endif
+    auto status = m_implementation->bulkGet(object_type, object_count, object_id, attr_count, attr_list, mode, object_statuses);
+
+    if (status == SAI_STATUS_SUCCESS)
+    {
+        for (uint32_t idx = 0; idx < object_count; idx++)
+        {
+            // TO DO: we should test object_statuses[idx] as well
+            sai_object_id_t switch_id = switchIdQuery(object_id[idx]);
+
+            if (!m_oids.objectReferenceExists(switch_id))
+            {
+                SWSS_LOG_ERROR("switch id 0x%" PRIx64 " doesn't exist", switch_id);
+            }
+
+            sai_object_meta_key_t meta_key = { .objecttype = object_type, .objectkey = { .key = { .object_id  = object_id[idx] } } };
+            meta_generic_validation_post_get(meta_key, switch_id, attr_count[idx], attr_list[idx]);
+//            SWSS_LOG_NOTICE("SYNCD BULK GET meta oid %" PRIx64 "attr %d", object_id[idx], attr_list[idx][0].value.u32);
+        }
+    }
+
+    return SAI_STATUS_SUCCESS;
+}
+
 sai_status_t Meta::bulkCreate(
         _In_ sai_object_type_t object_type,
         _In_ sai_object_id_t switchId,

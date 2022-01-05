@@ -614,6 +614,46 @@ void Recorder::recordGenericGetResponse(
     recordLine("G|" + sai_serialize_status(status) + "|" + joinFieldValues(arguments));
 }
 
+void Recorder::recordBulkGenericGet(
+        _In_ const std::string& objectType,
+        _In_ const std::vector<swss::FieldValueTuple>& entriesWithStatus)
+{
+    SWSS_LOG_ENTER();
+
+    std::string joined;
+
+    for (const auto &e: entriesWithStatus)
+    {
+        // ||obj_id|attr=val|attr=val|status||obj_id|attr=val|attr=val|status
+
+        joined += "||" + fvField(e) + "|" + fvValue(e);
+    }
+
+    // capital 'b' stands for bulk GET operation.
+
+    recordLine("b|" + objectType + joined);
+}
+
+void Recorder::recordBulkGenericGetResponse(
+        _In_ const std::string& objectType,
+        _In_ const std::vector<swss::FieldValueTuple>& entriesWithStatus)
+{
+    SWSS_LOG_ENTER();
+
+    std::string joined;
+
+    for (const auto &e: entriesWithStatus)
+    {
+        // ||obj_id|attr=val|attr=val|status||obj_id|attr=val|attr=val|status
+
+        joined += "||" + fvField(e) + "|" + fvValue(e);
+    }
+
+    // capital 'B' stands for bulk GET operation.
+
+    recordLine("B|" + objectType + joined);
+}
+
 void Recorder::recordGenericGetStats(
         _In_ sai_object_type_t object_type,
         _In_ sai_object_id_t object_id,

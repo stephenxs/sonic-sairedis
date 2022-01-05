@@ -1582,6 +1582,127 @@ sai_status_t RedisRemoteSaiInterface::bulkSet(
     return waitForBulkResponse(SAI_COMMON_API_BULK_SET, (uint32_t)serialized_object_ids.size(), object_statuses);
 }
 
+sai_status_t RedisRemoteSaiInterface::bulkGet(
+        _In_ sai_object_type_t object_type,
+        _In_ uint32_t object_count,
+        _In_ const sai_object_id_t *object_id,
+        _In_ const uint32_t *attr_count,
+        _Inout_ sai_attribute_t **attr_list,
+        _In_ sai_bulk_op_error_mode_t mode,
+        _Out_ sai_status_t *object_statuses)
+{
+    SWSS_LOG_ENTER();
+
+    std::vector<std::string> serializedObjectIds;
+
+//    SWSS_LOG_NOTICE("SYNCD BULK ENTER SHELL");
+
+    for (uint32_t idx = 0; idx < object_count; idx++)
+    {
+//        SWSS_LOG_NOTICE("SYNCD BULK EMPLACE OID %" PRIx64, object_id[idx]);
+        serializedObjectIds.emplace_back(sai_serialize_object_id(object_id[idx]));
+    }
+
+    return bulkGet(object_type, serializedObjectIds, attr_count, attr_list, mode, object_statuses);
+}
+
+sai_status_t RedisRemoteSaiInterface::bulkGet(
+        _In_ sai_object_type_t object_type,
+        _In_ const std::vector<std::string> &serialized_object_ids,
+        _In_ const uint32_t *attr_count,
+        _Inout_ sai_attribute_t **attr_list,
+        _In_ sai_bulk_op_error_mode_t mode,
+        _Out_ sai_status_t *object_statuses)
+{
+    SWSS_LOG_ENTER();
+
+    // TODO support mode
+
+//    SWSS_LOG_NOTICE("SYNCD BULK ENTER DO");
+
+    std::string str_object_type = sai_serialize_object_type(object_type);
+
+    std::vector<swss::FieldValueTuple> entries;
+
+    for (size_t idx = 0; idx < serialized_object_ids.size(); ++idx)
+    {
+        auto entry = SaiAttributeList::serialize_attr_list(object_type, attr_count[idx], attr_list[idx], false);
+
+        std::string str_attr = joinFieldValues(entry);
+
+        swss::FieldValueTuple fvtNoStatus(serialized_object_ids[idx] , str_attr);
+
+        entries.push_back(fvtNoStatus);
+    }
+
+    /*
+     * We are adding number of entries to actually add ':' to be compatible
+     * with previous
+     */
+
+    // key:         object_type:count
+    // field:       object_id
+    // value:       object_attrs
+    std::string key = str_object_type + ":" + std::to_string(entries.size());
+
+    m_recorder->recordBulkGenericGet(str_object_type, entries);
+
+    m_communicationChannel->set(key, entries, REDIS_ASIC_STATE_COMMAND_BULK_GET);
+
+    swss::KeyOpFieldsValuesTuple kco;
+    auto status = waitForBulkGetResponse(object_type, serialized_object_ids, attr_count, attr_list, object_statuses, kco);
+
+    m_recorder->recordBulkGenericGetResponse(str_object_type, kfvFieldsValues(kco));
+
+    return status;
+}
+
+sai_status_t RedisRemoteSaiInterface::waitForBulkGetResponse(
+        _In_ sai_object_type_t object_type,
+        _In_ const std::vector<std::string> &serialized_object_ids,
+        _In_ const uint32_t *attr_count,
+        _Inout_ sai_attribute_t **attr_list,
+        _Out_ sai_status_t *object_statuses,
+        _Out_ swss::KeyOpFieldsValuesTuple &kco)
+{
+    SWSS_LOG_ENTER();
+
+    auto status = m_communicationChannel->wait(REDIS_ASIC_STATE_COMMAND_GETRESPONSE, kco);
+
+    auto &values = kfvFieldsValues(kco);
+
+    if (status != SAI_STATUS_SUCCESS)
+    {
+        SWSS_LOG_THROW("logic error, get bulk response returned non zero %d", status);
+        return status;
+    }
+
+    uint32_t attr_index = 0;
+
+    // Fetch all the status
+    for(uint32_t obj_index = 0; obj_index < serialized_object_ids.size(); obj_index++)
+    {
+//        sai_deserialize_status(fvField(values[obj_index]), object_statuses[obj_index]);
+        object_statuses[obj_index] = SAI_STATUS_SUCCESS;
+    }
+//    values.erase(values.begin(), values.begin() + serialized_object_ids.size());
+
+    // Fetch attribute list for each object
+    SaiAttributeList list(object_type, values, false);
+
+//    SWSS_LOG_NOTICE("BULK GET OBJECTS %d", serialized_object_ids.size());
+
+    for(uint32_t obj_index = 0; obj_index < serialized_object_ids.size(); obj_index++)
+    {
+//        SWSS_LOG_NOTICE("BULK GET BEFORE TRANSFER %s %d attr index %d", serialized_object_ids[obj_index].c_str(), list.get_attr_list()[attr_index].value.u32, attr_index);
+        transfer_attributes(object_type, attr_count[obj_index], &(list.get_attr_list()[attr_index]), attr_list[obj_index], false);
+//        SWSS_LOG_NOTICE("BULK GET AFTER TRANSFER %s %d attr index %d", serialized_object_ids[obj_index].c_str(), attr_list[obj_index][0].value.u32);
+        attr_index += attr_count[obj_index];
+    }
+
+    return status;
+}
+
 sai_status_t RedisRemoteSaiInterface::bulkCreate(
         _In_ sai_object_type_t object_type,
         _In_ sai_object_id_t switch_id,
