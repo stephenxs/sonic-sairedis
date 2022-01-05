@@ -1249,6 +1249,19 @@ sai_status_t VirtualSwitchSaiInterface::bulkSet(
     return ss->bulkSet(object_type, serialized_object_ids, attr_list, mode, object_statuses);
 }
 
+sai_status_t VirtualSwitchSaiInterface::bulkGet(
+        _In_ sai_object_type_t object_type,
+        _In_ uint32_t object_count,
+        _In_ const sai_object_id_t *object_id,
+        _In_ const uint32_t *attr_count,
+        _Inout_ sai_attribute_t **attr_list,
+        _In_ sai_bulk_op_error_mode_t mode,
+        _Out_ sai_status_t *object_statuses)
+{
+    SWSS_LOG_NOTICE("SYNCD BULK GET VirtualSwitchSaiInterface stub");
+    return SAI_STATUS_SUCCESS;
+}
+
 sai_status_t VirtualSwitchSaiInterface::bulkCreate(
         _In_ sai_object_type_t object_type,
         _In_ sai_object_id_t switch_id,

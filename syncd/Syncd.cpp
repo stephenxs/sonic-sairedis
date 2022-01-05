@@ -343,6 +343,9 @@ sai_status_t Syncd::processSingleEvent(
     if (op == REDIS_ASIC_STATE_COMMAND_BULK_SET)
         return processBulkQuadEvent(SAI_COMMON_API_BULK_SET, kco);
 
+    if (op == REDIS_ASIC_STATE_COMMAND_BULK_GET)
+        return processBulkQuadEvent(SAI_COMMON_API_BULK_GET, kco);
+
     if (op == REDIS_ASIC_STATE_COMMAND_NOTIFY)
         return processNotifySyncd(kco);
 
@@ -902,8 +905,14 @@ sai_status_t Syncd::processBulkQuadEventInInitViewMode(
             }
 
         case SAI_COMMON_API_BULK_GET:
-            SWSS_LOG_THROW("GET bulk api is not implemented in init view mode, FIXME");
-
+            if (info->isobjectid)
+            {
+                return processBulkOid(objectType, objectIds, api, attributes, strAttributes);
+            }
+            else
+            {
+                SWSS_LOG_THROW("GET bulk api is not implemented in init view mode, FIXME");
+            }
         default:
 
             SWSS_LOG_THROW("common bulk api (%s) is not implemented in init view mode",
@@ -1711,6 +1720,10 @@ sai_status_t Syncd::processBulkOid(
         {
             status = processOid(objectType, objectIds[idx], SAI_COMMON_API_SET, attr_count, attr_list);
         }
+        else if (api == SAI_COMMON_API_BULK_GET)
+        {
+            status = processOid(objectType, objectIds[idx], SAI_COMMON_API_GET, attr_count, attr_list);
+        }
         else
         {
             SWSS_LOG_THROW("api %s is not supported in bulk mode",
@@ -1732,9 +1745,16 @@ sai_status_t Syncd::processBulkOid(
         statuses[idx] = status;
     }
 
-    sendApiResponse(api, all, (uint32_t)objectIds.size(), statuses.data());
+    if (api == SAI_COMMON_API_BULK_GET)
+    {
+        sendBulkGetResponse(objectType, objectIds, attributes, SAI_STATUS_SUCCESS);
+    }
+    else
+    {
+        sendApiResponse(api, all, (uint32_t)objectIds.size(), statuses.data());
 
-    syncUpdateRedisBulkQuadEvent(api, statuses, objectType, objectIds, strAttributes);
+        syncUpdateRedisBulkQuadEvent(api, statuses, objectType, objectIds, strAttributes);
+    }
 
     return all;
 }
@@ -2940,6 +2960,75 @@ void Syncd::sendGetResponse(
      */
 
     m_selectableChannel->set(strStatus, entry, REDIS_ASIC_STATE_COMMAND_GETRESPONSE);
+
+    SWSS_LOG_INFO("response for GET api was send");
+}
+
+void Syncd::sendBulkGetResponse(
+        _In_ sai_object_type_t objectType,
+        _In_ const std::vector<std::string>& objectIdStrs,
+        _In_ const std::vector<std::shared_ptr<SaiAttributeList>>& attributes,
+        _In_ sai_status_t status)
+{
+    SWSS_LOG_ENTER();
+
+    std::vector<swss::FieldValueTuple> entry, entries;
+
+    for (size_t idx = 0; idx < objectIdStrs.size(); ++idx)
+    {
+        auto& list = attributes[idx];
+
+        sai_attribute_t *attr_list = list->get_attr_list();
+        uint32_t attr_count = list->get_attr_count();
+        if (status == SAI_STATUS_SUCCESS)
+        {
+            sai_object_id_t object_id;
+            sai_deserialize_object_id(objectIdStrs[idx], object_id);
+            sai_object_id_t switchVid = VidManager::switchIdQuery(object_id);
+            m_translator->translateRidToVid(objectType, switchVid, attr_count, attr_list);
+
+            /*
+             * Normal serialization + translate RID to VID.
+             */
+
+            entry = SaiAttributeList::serialize_attr_list(
+                objectType,
+                attr_count,
+                attr_list,
+                false);
+
+            /*
+             * All oid values here are VIDs.
+             */
+
+            snoopGetResponse(objectType, objectIdStrs[idx], attr_count, attr_list);
+
+            entries.insert(entries.end(), entry.begin(), entry.end());
+        }
+        else
+        {
+            /*
+             * Some other error, don't send attributes at all.
+             */
+        }
+    }
+
+    for (const auto &e: entries)
+    {
+        SWSS_LOG_DEBUG("attr: %s: %s", fvField(e).c_str(), fvValue(e).c_str());
+    }
+
+    std::string strStatus = sai_serialize_status(status);
+
+    SWSS_LOG_INFO("sending response for GET api with status: %s", strStatus.c_str());
+
+    /*
+     * Since we have only one get at a time, we don't have to serialize object
+     * type and object id, only get status is required to be returned.  Get
+     * response will not put any data to table, only queue is used.
+     */
+
+    m_selectableChannel->set(strStatus, entries, REDIS_ASIC_STATE_COMMAND_GETRESPONSE);
 
     SWSS_LOG_INFO("response for GET api was send");
 }
