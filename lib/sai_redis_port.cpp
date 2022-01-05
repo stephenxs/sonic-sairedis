@@ -18,7 +18,7 @@ REDIS_GENERIC_STATS(PORT_POOL,port_pool);
 REDIS_BULK_CREATE(PORT,port);
 REDIS_BULK_REMOVE(PORT,port);
 REDIS_BULK_SET(PORT,port);
-REDIS_BULK_GET(PORT,port);
+REDIS_BULK_GET_NEW(PORT,port);
 
 const sai_port_api_t redis_port_api = {
 

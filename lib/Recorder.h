@@ -160,6 +160,14 @@ namespace sairedis
             void recordGenericResponse(
                     _In_ sai_status_t status);
 
+            void recordBulkGenericGet(
+                    _In_ const std::string& objectType,
+                    _In_ const std::vector<swss::FieldValueTuple>& entriesWithStatus);
+
+            void recordBulkGenericGetResponse(
+                    _In_ const std::string& objectType,
+                    _In_ const std::vector<swss::FieldValueTuple>& entriesWithStatus);
+
         public: // create ENTRY
 
             SAI_REDIS_RECORDER_DECLARE_RECORD_CREATE(fdb_entry);
