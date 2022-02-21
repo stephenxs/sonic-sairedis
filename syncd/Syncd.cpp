@@ -904,8 +904,14 @@ sai_status_t Syncd::processBulkQuadEventInInitViewMode(
             }
 
         case SAI_COMMON_API_BULK_GET:
-            SWSS_LOG_THROW("GET bulk api is not implemented in init view mode, FIXME");
-
+            if (info->isobjectid)
+            {
+                return processBulkOid(objectType, objectIds, api, attributes, strAttributes);
+            }
+            else
+            {
+                SWSS_LOG_THROW("GET bulk api is not implemented in init view mode, FIXME");
+            }
         default:
 
             SWSS_LOG_THROW("common bulk api (%s) is not implemented in init view mode",

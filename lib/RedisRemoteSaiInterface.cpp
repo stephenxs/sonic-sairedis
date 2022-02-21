@@ -1609,7 +1609,7 @@ sai_status_t RedisRemoteSaiInterface::bulkGet(
 
     // TODO support mode
 
-//    SWSS_LOG_NOTICE("SYNCD BULK ENTER DO");
+    SWSS_LOG_NOTICE("SYNCD BULK ENTER DO");
 
     std::string str_object_type = sai_serialize_object_type(object_type);
 
@@ -1619,7 +1619,7 @@ sai_status_t RedisRemoteSaiInterface::bulkGet(
     {
         auto entry = SaiAttributeList::serialize_attr_list(object_type, attr_count[idx], attr_list[idx], false);
 
-        std::string str_attr = joinFieldValues(entry);
+        std::string str_attr = Globals::joinFieldValues(entry);
 
         swss::FieldValueTuple fvtNoStatus(serialized_object_ids[idx] , str_attr);
 
@@ -1681,7 +1681,7 @@ sai_status_t RedisRemoteSaiInterface::waitForBulkGetResponse(
     // Fetch attribute list for each object
     SaiAttributeList list(object_type, values, false);
 
-//    SWSS_LOG_NOTICE("BULK GET OBJECTS %d", serialized_object_ids.size());
+    SWSS_LOG_NOTICE("BULK GET OBJECTS %d", serialized_object_ids.size());
 
     for(uint32_t obj_index = 0; obj_index < serialized_object_ids.size(); obj_index++)
     {

@@ -98,27 +98,6 @@ namespace sairedis
                     _In_ sai_bulk_op_error_mode_t mode,
                     _Out_ sai_status_t *object_statuses) override;
 
-        public: // bulk create ENTRY
-
-            SAIREDIS_SAI_DECLARE_BULK_CREATE_ENTRY(fdb_entry);
-            SAIREDIS_SAI_DECLARE_BULK_CREATE_ENTRY(inseg_entry);
-            SAIREDIS_SAI_DECLARE_BULK_CREATE_ENTRY(nat_entry);
-            SAIREDIS_SAI_DECLARE_BULK_CREATE_ENTRY(route_entry);
-
-        public: // bulk remove ENTRY
-
-            SAIREDIS_SAI_DECLARE_BULK_REMOVE_ENTRY(fdb_entry);
-            SAIREDIS_SAI_DECLARE_BULK_REMOVE_ENTRY(inseg_entry);
-            SAIREDIS_SAI_DECLARE_BULK_REMOVE_ENTRY(nat_entry);
-            SAIREDIS_SAI_DECLARE_BULK_REMOVE_ENTRY(route_entry);
-
-        public: // bulk set ENTRY
-
-            SAIREDIS_SAI_DECLARE_BULK_SET_ENTRY(fdb_entry);
-            SAIREDIS_SAI_DECLARE_BULK_SET_ENTRY(inseg_entry);
-            SAIREDIS_SAI_DECLARE_BULK_SET_ENTRY(nat_entry);
-            SAIREDIS_SAI_DECLARE_BULK_SET_ENTRY(route_entry);
-
         public: // stats API
 
             virtual sai_status_t getStats(
