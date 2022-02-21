@@ -51,6 +51,11 @@ VS_GENERIC_QUAD(HOSTIF_TRAP_GROUP,hostif_trap_group);
 VS_GENERIC_QUAD(HOSTIF_TRAP,hostif_trap);
 VS_GENERIC_QUAD(HOSTIF_USER_DEFINED_TRAP,hostif_user_defined_trap);
 
+VS_BULK_CREATE(HOSTIF,hostif);
+VS_BULK_REMOVE(HOSTIF,hostif);
+VS_BULK_SET(HOSTIF,hostif);
+VS_BULK_GET(HOSTIF,hostif);
+
 const sai_hostif_api_t vs_hostif_api = {
 
     VS_GENERIC_QUAD_API(hostif)
@@ -63,4 +68,9 @@ const sai_hostif_api_t vs_hostif_api = {
     vs_send_hostif_packet,
     vs_allocate_hostif_packet,
     vs_free_hostif_packet,
+
+    vs_bulk_create_hostif,
+    vs_bulk_remove_hostif,
+    vs_bulk_set_hostif,
+    vs_bulk_get_hostif
 };

@@ -51,6 +51,10 @@ REDIS_GENERIC_QUAD(HOSTIF_TRAP_GROUP,hostif_trap_group);
 REDIS_GENERIC_QUAD(HOSTIF_TRAP,hostif_trap);
 REDIS_GENERIC_QUAD(HOSTIF_USER_DEFINED_TRAP,hostif_user_defined_trap);
 
+REDIS_BULK_CREATE(HOSTIF,hostif);
+REDIS_BULK_REMOVE(HOSTIF,hostif);
+REDIS_BULK_SET(HOSTIF,hostif);
+REDIS_BULK_GET(HOSTIF,hostif);
 const sai_hostif_api_t redis_hostif_api = {
 
     REDIS_GENERIC_QUAD_API(hostif)
@@ -63,4 +67,9 @@ const sai_hostif_api_t redis_hostif_api = {
     redis_send_hostif_packet,
     redis_allocate_hostif_packet,
     redis_free_hostif_packet,
+
+    redis_bulk_create_hostif,
+    redis_bulk_remove_hostif,
+    redis_bulk_set_hostif,
+    redis_bulk_get_hostif
 };
