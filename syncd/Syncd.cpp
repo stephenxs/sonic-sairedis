@@ -2122,7 +2122,12 @@ void Syncd::processFlexCounterEvent( // TODO must be moved to go via ASIC channe
 
     sai_object_id_t rid;
 
-    if (!m_translator->tryTranslateVidToRid(vid, rid))
+    // It's possible the object was removed before the corresponding counter is removed
+    // even if orchagent removed counter first and then the object itself because
+    // they are handled in different tables in syncd
+    // In such case, error message will be reported in tryTranslateVidToRid
+    // To avoid the error, the function is called for SET only
+    if (op == SET_COMMAND && !m_translator->tryTranslateVidToRid(vid, rid))
     {
         SWSS_LOG_WARN("port VID %s, was not found (probably port was removed/splitted) and will remove from counters now",
                 sai_serialize_object_id(vid).c_str());
