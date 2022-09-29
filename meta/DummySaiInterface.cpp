@@ -423,6 +423,21 @@ sai_status_t DummySaiInterface::bulkSet(
 
 sai_status_t DummySaiInterface::bulkSet(
         _In_ uint32_t object_count,
+        _In_ const sai_my_sid_entry_t *my_sid_entry,
+        _In_ const sai_attribute_t *attr_list,
+        _In_ sai_bulk_op_error_mode_t mode,
+        _Out_ sai_status_t *object_statuses)
+{
+    SWSS_LOG_ENTER();
+
+    for (uint32_t idx = 0; idx < object_count; idx++)
+        object_statuses[idx] = m_status;
+
+    return m_status;
+}
+
+sai_status_t DummySaiInterface::bulkSet(
+        _In_ uint32_t object_count,
         _In_ const sai_fdb_entry_t *fdb_entry,
         _In_ const sai_attribute_t *attr_list,
         _In_ sai_bulk_op_error_mode_t mode,
