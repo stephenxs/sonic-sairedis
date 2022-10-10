@@ -311,7 +311,7 @@ PRIVATE extern std::shared_ptr<sairedis::SaiInterface>   redis_sai;
             object_statuses);                       \
 }
 
-#define REDIS_BULK_GET_NEW(OT,fname)                \
+#define REDIS_BULK_GET(OT,fname)                    \
     static sai_status_t redis_bulk_get_ ## fname(   \
             _In_ uint32_t object_count,             \
             _In_ const sai_object_id_t *object_id,  \
@@ -332,7 +332,7 @@ PRIVATE extern std::shared_ptr<sairedis::SaiInterface>   redis_sai;
             object_statuses);                       \
 }
 
-#define REDIS_BULK_GET(OT,fname)                    \
+#define REDIS_BULK_GET_OLD(OT,fname)                \
     static sai_status_t redis_bulk_get_ ## fname(   \
             _In_ uint32_t object_count,             \
             _In_ const sai_object_id_t *object_id,  \
