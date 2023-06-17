@@ -592,3 +592,28 @@ sai_status_t ClientServerSai::logSet(
 
     return m_sai->logSet(api, log_level);
 }
+
+sai_status_t ClientServerSai::sai_bulk_get_attribute(
+    _In_ sai_object_id_t switch_id,
+    _In_ sai_object_type_t object_type,
+    _In_ uint32_t object_count,
+    _In_ const sai_object_key_t *object_key,
+    _Inout_ uint32_t *attr_count,
+    _Inout_ sai_attribute_t **attr_list,
+    _Inout_ sai_status_t *object_statuses)
+{
+    MUTEX();
+    SWSS_LOG_ENTER();
+    REDIS_CHECK_API_INITIALIZED();
+
+//    SWSS_LOG_NOTICE("SYNCD BULK GET Sai stub");
+
+    return m_sai->sai_bulk_get_attribute(
+        switch_id,
+            object_type,
+            object_count,
+            object_key,
+            attr_count,
+            attr_list,
+            object_statuses);
+}

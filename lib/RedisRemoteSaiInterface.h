@@ -99,6 +99,16 @@ namespace sairedis
                     _In_ sai_bulk_op_error_mode_t mode,
                     _Out_ sai_status_t *object_statuses) override;
 
+    public:
+        virtual sai_status_t sai_bulk_get_attribute(
+            _In_ sai_object_id_t switch_id,
+            _In_ sai_object_type_t object_type,
+            _In_ uint32_t object_count,
+            _In_ const sai_object_key_t *object_key,
+            _Inout_ uint32_t *attr_count,
+            _Inout_ sai_attribute_t **attr_list,
+            _Inout_ sai_status_t *object_statuses) override;
+
         public: // stats API
 
             virtual sai_status_t getStats(
@@ -272,6 +282,14 @@ namespace sairedis
              */
             sai_status_t waitForResponse(
                     _In_ sai_common_api_t api);
+
+            sai_status_t waitForBulkGetResponse(
+                    _In_ sai_object_type_t object_type,
+                    _In_ const std::vector<std::string> &serialized_object_ids,
+                    _In_ const uint32_t *attr_count,
+                    _Inout_ sai_attribute_t **attr_list,
+                    _Out_ sai_status_t *object_statuses,
+                    _Out_ swss::KeyOpFieldsValuesTuple &kco);
 
             /**
              * @brief Wait for GET response.

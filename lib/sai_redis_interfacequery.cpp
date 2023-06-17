@@ -198,7 +198,13 @@ sai_status_t sai_bulk_get_attribute(
 {
     SWSS_LOG_ENTER();
 
-    return SAI_STATUS_NOT_IMPLEMENTED;
+    return redis_sai->sai_bulk_get_attribute(switch_id,
+                                             object_type,
+                                             object_count,
+                                             object_key,
+                                             attr_count,
+                                             attr_list,
+                                             object_statuses);
 }
 
 sai_status_t sai_get_maximum_attribute_count(

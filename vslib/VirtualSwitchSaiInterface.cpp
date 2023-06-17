@@ -1538,6 +1538,19 @@ sai_status_t VirtualSwitchSaiInterface::logSet(
     return SAI_STATUS_SUCCESS;
 }
 
+sai_status_t VirtualSwitchSaiInterface::sai_bulk_get_attribute(
+    _In_ sai_object_id_t switch_id,
+    _In_ sai_object_type_t object_type,
+    _In_ uint32_t object_count,
+    _In_ const sai_object_key_t *object_key,
+    _Inout_ uint32_t *attr_count,
+    _Inout_ sai_attribute_t **attr_list,
+    _Inout_ sai_status_t *object_statuses)
+{
+    SWSS_LOG_NOTICE("SYNCD BULK GET VirtualSwitchSaiInterface stub");
+    return SAI_STATUS_SUCCESS;
+}
+
 bool VirtualSwitchSaiInterface::writeWarmBootFile(
         _In_ const char* warmBootFile) const
 {

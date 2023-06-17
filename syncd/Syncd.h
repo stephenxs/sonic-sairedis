@@ -344,6 +344,12 @@ namespace syncd
                     _In_ uint32_t attr_count,
                     _In_ sai_attribute_t *attr_list);
 
+            void sendBulkGetResponse(
+                    _In_ sai_object_type_t objectType,
+                    _In_ const std::vector<std::string>& objectIdStrs,
+                    _In_ const std::vector<std::shared_ptr<saimeta::SaiAttributeList>>& attributes,
+                    _In_ sai_status_t status);
+
             void sendNotifyResponse(
                     _In_ sai_status_t status);
 
