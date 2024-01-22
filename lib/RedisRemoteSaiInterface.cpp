@@ -476,6 +476,12 @@ sai_status_t RedisRemoteSaiInterface::setRedisExtensionAttribute(
 
             return SAI_STATUS_SUCCESS;
 
+        case SAI_REDIS_SWITCH_ATTR_FLEX_COUNTER_GROUP:
+            return notifyCounterGroupOperations(objectId, attr);
+
+        case SAI_REDIS_SWITCH_ATTR_FLEX_COUNTER:
+            return notifyCounterOperations(objectId, attr);
+
         default:
             break;
     }
@@ -483,6 +489,77 @@ sai_status_t RedisRemoteSaiInterface::setRedisExtensionAttribute(
     SWSS_LOG_ERROR("unknown redis extension attribute: %d", attr->id);
 
     return SAI_STATUS_FAILURE;
+}
+
+sai_status_t RedisRemoteSaiInterface::notifyCounterGroupOperations(
+        _In_ sai_object_id_t objectId,
+        _In_ const sai_attribute_t *attr)
+{
+    std::vector<swss::FieldValueTuple> entries;
+    sai_redis_flex_counter_group_parameter_t *flexCounterGroupParam = reinterpret_cast<sai_redis_flex_counter_group_parameter_t*>(attr->value.ptr);
+
+    if (flexCounterGroupParam->counter_group_name == nullptr)
+    {
+        return SAI_STATUS_FAILURE;
+    }
+
+    std::string key(flexCounterGroupParam->counter_group_name);
+
+    if (flexCounterGroupParam->poll_interval != nullptr)
+    {
+        entries.push_back({POLL_INTERVAL_FIELD, flexCounterGroupParam->poll_interval});
+    }
+
+    if (flexCounterGroupParam->stats_mode != nullptr)
+    {
+        entries.push_back({STATS_MODE_FIELD, flexCounterGroupParam->stats_mode});
+    }
+
+    if (flexCounterGroupParam->plugins != nullptr && flexCounterGroupParam->plugin_name != nullptr)
+    {
+        entries.push_back({flexCounterGroupParam->plugin_name, flexCounterGroupParam->plugins});
+    }
+
+    if (flexCounterGroupParam->operation != nullptr)
+    {
+        entries.push_back({FLEX_COUNTER_STATUS_FIELD, flexCounterGroupParam->operation});
+    }
+
+    m_recorder->recordGenericSet(key, entries);
+    m_communicationChannel->set(key, entries, REDIS_FLEX_COUNTER_COMMAND_COUNTER_GROUP);
+
+    return waitForResponse(SAI_COMMON_API_SET);
+}
+
+sai_status_t RedisRemoteSaiInterface::notifyCounterOperations(
+        _In_ sai_object_id_t objectId,
+        _In_ const sai_attribute_t *attr)
+{
+    auto *param = reinterpret_cast<sai_redis_flex_counter_parameter_t*>(attr->value.ptr);
+    std::vector<swss::FieldValueTuple> entries;
+    auto serializedObjectId = sai_serialize_object_id(objectId);
+    std::string key(param->counter_key);
+    std::string command;
+
+    if (param->counter_ids != nullptr)
+    {
+        entries.push_back({param->counter_field_name, param->counter_ids});
+        command = REDIS_FLEX_COUNTER_COMMAND_START_POLL;
+    }
+    else
+    {
+        command = REDIS_FLEX_COUNTER_COMMAND_STOP_POLL;
+    }
+
+    if (param->stats_mode != nullptr)
+    {
+        entries.push_back({STATS_MODE_FIELD, param->stats_mode});
+    }
+
+    m_recorder->recordGenericSet(key, entries);
+    m_communicationChannel->set(key, entries, command);
+
+    return waitForResponse(SAI_COMMON_API_SET);
 }
 
 sai_status_t RedisRemoteSaiInterface::set(

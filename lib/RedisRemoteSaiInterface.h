@@ -343,6 +343,14 @@ namespace sairedis
                     _In_ sai_object_id_t objectId,
                     _In_ const sai_attribute_t *attr);
 
+            sai_status_t notifyCounterGroupOperations(
+                    _In_ sai_object_id_t objectId,
+                    _In_ const sai_attribute_t *attr);
+
+            sai_status_t notifyCounterOperations(
+                    _In_ sai_object_id_t objectId,
+                    _In_ const sai_attribute_t *attr);
+
         private:
 
             sai_status_t sai_redis_notify_syncd(

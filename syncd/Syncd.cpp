@@ -169,6 +169,8 @@ Syncd::Syncd(
     m_dbFlexCounter = std::make_shared<swss::DBConnector>(m_contextConfig->m_dbFlex, 0);
     m_flexCounter = std::make_shared<swss::ConsumerTable>(m_dbFlexCounter.get(), FLEX_COUNTER_TABLE);
     m_flexCounterGroup = std::make_shared<swss::ConsumerTable>(m_dbFlexCounter.get(), FLEX_COUNTER_GROUP_TABLE);
+    m_flexCounterTable = std::make_shared<swss::Table>(m_dbFlexCounter.get(), FLEX_COUNTER_TABLE);
+    m_flexCounterGroupTable = std::make_shared<swss::Table>(m_dbFlexCounter.get(), FLEX_COUNTER_GROUP_TABLE);
 
     m_switchConfigContainer = std::make_shared<sairedis::SwitchConfigContainer>();
     m_redisVidIndexGenerator = std::make_shared<sairedis::RedisVidIndexGenerator>(m_dbAsic, REDIS_KEY_VIDCOUNTER);
@@ -379,6 +381,36 @@ sai_status_t Syncd::processSingleEvent(
 
     if (op == REDIS_ASIC_STATE_COMMAND_OBJECT_TYPE_GET_AVAILABILITY_QUERY)
         return processObjectTypeGetAvailabilityQuery(kco);
+
+    if (op == REDIS_FLEX_COUNTER_COMMAND_START_POLL)
+    {
+        std::vector<swss::FieldValueTuple> values = kfvFieldsValues(kco);
+        processFlexCounterEvent(key, "SET", values);
+
+        sendApiResponse(SAI_COMMON_API_SET, SAI_STATUS_SUCCESS);
+
+        return SAI_STATUS_SUCCESS;
+    }
+
+    if (op == REDIS_FLEX_COUNTER_COMMAND_STOP_POLL)
+    {
+        std::vector<swss::FieldValueTuple> values = kfvFieldsValues(kco);
+        processFlexCounterEvent(key, "DEL", values);
+
+        sendApiResponse(SAI_COMMON_API_SET, SAI_STATUS_SUCCESS);
+
+        return SAI_STATUS_SUCCESS;
+    }
+
+    if (op == REDIS_FLEX_COUNTER_COMMAND_COUNTER_GROUP)
+    {
+        std::vector<swss::FieldValueTuple> values = kfvFieldsValues(kco);
+        processFlexCounterGroupEvent(key, "SET", values);
+
+        sendApiResponse(SAI_COMMON_API_SET, SAI_STATUS_SUCCESS);
+
+        return SAI_STATUS_SUCCESS;
+    }
 
     SWSS_LOG_THROW("event op '%s' is not implemented, FIXME", op.c_str());
 }
@@ -2436,18 +2468,35 @@ void Syncd::processFlexCounterGroupEvent( // TODO must be moved to go via ASIC c
 
     consumer.pop(kco);
 
-    auto& groupName = kfvKey(kco);
+    auto& key = kfvKey(kco);
     auto& op = kfvOp(kco);
     auto& values = kfvFieldsValues(kco);
 
-    WatchdogScope ws(m_timerWatchdog, op + ":" + groupName, &kco);
+    processFlexCounterGroupEvent(key, op, values, false);
+}
+
+void Syncd::processFlexCounterGroupEvent( // TODO must be moved to go via ASIC channel queue
+        _In_ const std::string &groupName,
+        _In_ const std::string &op,
+        _In_ const std::vector<swss::FieldValueTuple> &values,
+        _In_ bool operateDb)
+{
+    WatchdogScope ws(m_timerWatchdog, op + ":" + groupName);
 
     if (op == SET_COMMAND)
     {
         m_manager->addCounterPlugin(groupName, values);
+        if (operateDb)
+        {
+            m_flexCounterGroupTable->set(groupName, values);
+        }
     }
     else if (op == DEL_COMMAND)
     {
+        if (operateDb)
+        {
+            m_flexCounterGroupTable->del(groupName);
+        }
         m_manager->removeCounterPlugins(groupName);
     }
     else
@@ -2469,8 +2518,18 @@ void Syncd::processFlexCounterEvent( // TODO must be moved to go via ASIC channe
 
     auto& key = kfvKey(kco);
     auto& op = kfvOp(kco);
+    auto& values = kfvFieldsValues(kco);
 
-    WatchdogScope ws(m_timerWatchdog, op + ":" + key, &kco);
+    processFlexCounterEvent(key, op, values, false);
+}
+
+void Syncd::processFlexCounterEvent( // TODO must be moved to go via ASIC channel queue
+        _In_ const std::string &key,
+        _In_ const std::string &op,
+        _In_ const std::vector<swss::FieldValueTuple> &values,
+        _In_ bool operateDb)
+{
+    WatchdogScope ws(m_timerWatchdog, op + ":" + key);
 
     auto delimiter = key.find_first_of(":");
 
@@ -2484,6 +2543,8 @@ void Syncd::processFlexCounterEvent( // TODO must be moved to go via ASIC channe
     auto groupName = key.substr(0, delimiter);
     auto strVid = key.substr(delimiter + 1);
 
+    auto effective_op = op;
+
     sai_object_id_t vid;
     sai_deserialize_object_id(strVid, vid);
 
@@ -2491,20 +2552,33 @@ void Syncd::processFlexCounterEvent( // TODO must be moved to go via ASIC channe
 
     if (!m_translator->tryTranslateVidToRid(vid, rid))
     {
-        SWSS_LOG_WARN("port VID %s, was not found (probably port was removed/splitted) and will remove from counters now",
-                sai_serialize_object_id(vid).c_str());
-
-        op = DEL_COMMAND;
+        if (operateDb)
+        {
+            SWSS_LOG_THROW("port VID %s, was not found (probably port was removed/splitted) and will remove from counters now",
+                           sai_serialize_object_id(vid).c_str());
+        }
+        else
+        {
+            SWSS_LOG_WARN("port VID %s, was not found (probably port was removed/splitted) and will remove from counters now",
+                          sai_serialize_object_id(vid).c_str());
+            effective_op = DEL_COMMAND;
+        }
     }
 
-    const auto values = kfvFieldsValues(kco);
-
-    if (op == SET_COMMAND)
+    if (effective_op == SET_COMMAND)
     {
         m_manager->addCounter(vid, rid, groupName, values);
+        if (operateDb)
+        {
+            m_flexCounterTable->set(key, values);
+        }
     }
-    else if (op == DEL_COMMAND)
+    else if (effective_op == DEL_COMMAND)
     {
+        if (operateDb)
+        {
+            m_flexCounterTable->del(key);
+        }
         m_manager->removeCounter(vid, groupName);
     }
     else
