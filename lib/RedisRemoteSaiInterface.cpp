@@ -537,7 +537,6 @@ sai_status_t RedisRemoteSaiInterface::notifyCounterOperations(
 {
     auto *param = reinterpret_cast<sai_redis_flex_counter_parameter_t*>(attr->value.ptr);
     std::vector<swss::FieldValueTuple> entries;
-    auto serializedObjectId = sai_serialize_object_id(objectId);
     std::string key(param->counter_key);
     std::string command;
 
@@ -545,15 +544,14 @@ sai_status_t RedisRemoteSaiInterface::notifyCounterOperations(
     {
         entries.push_back({param->counter_field_name, param->counter_ids});
         command = REDIS_FLEX_COUNTER_COMMAND_START_POLL;
+        if (param->stats_mode != nullptr)
+        {
+            entries.push_back({STATS_MODE_FIELD, param->stats_mode});
+        }
     }
     else
     {
         command = REDIS_FLEX_COUNTER_COMMAND_STOP_POLL;
-    }
-
-    if (param->stats_mode != nullptr)
-    {
-        entries.push_back({STATS_MODE_FIELD, param->stats_mode});
     }
 
     m_recorder->recordGenericSet(key, entries);
