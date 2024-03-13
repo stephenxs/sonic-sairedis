@@ -345,11 +345,11 @@ namespace sairedis
 
             sai_status_t notifyCounterGroupOperations(
                     _In_ sai_object_id_t objectId,
-                    _In_ const sai_attribute_t *attr);
+                    _In_ const sai_redis_flex_counter_group_parameter_t *flexCounterGroupParam);
 
             sai_status_t notifyCounterOperations(
                     _In_ sai_object_id_t objectId,
-                    _In_ const sai_attribute_t *attr);
+                    _In_ const sai_redis_flex_counter_parameter_t *flexCounterParam);
 
         private:
 

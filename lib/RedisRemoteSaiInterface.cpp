@@ -477,10 +477,12 @@ sai_status_t RedisRemoteSaiInterface::setRedisExtensionAttribute(
             return SAI_STATUS_SUCCESS;
 
         case SAI_REDIS_SWITCH_ATTR_FLEX_COUNTER_GROUP:
-            return notifyCounterGroupOperations(objectId, attr);
+            return notifyCounterGroupOperations(objectId,
+                                                reinterpret_cast<sai_redis_flex_counter_group_parameter_t*>(attr->value.ptr));
 
         case SAI_REDIS_SWITCH_ATTR_FLEX_COUNTER:
-            return notifyCounterOperations(objectId, attr);
+            return notifyCounterOperations(objectId,
+                                                reinterpret_cast<sai_redis_flex_counter_parameter_t*>(attr->value.ptr));
 
         default:
             break;
@@ -493,12 +495,11 @@ sai_status_t RedisRemoteSaiInterface::setRedisExtensionAttribute(
 
 sai_status_t RedisRemoteSaiInterface::notifyCounterGroupOperations(
         _In_ sai_object_id_t objectId,
-        _In_ const sai_attribute_t *attr)
+        _In_ const sai_redis_flex_counter_group_parameter_t *flexCounterGroupParam)
 {
     std::vector<swss::FieldValueTuple> entries;
-    sai_redis_flex_counter_group_parameter_t *flexCounterGroupParam = reinterpret_cast<sai_redis_flex_counter_group_parameter_t*>(attr->value.ptr);
 
-    if (flexCounterGroupParam->counter_group_name == nullptr)
+    if (flexCounterGroupParam == nullptr || flexCounterGroupParam->counter_group_name == nullptr)
     {
         return SAI_STATUS_FAILURE;
     }
@@ -533,20 +534,19 @@ sai_status_t RedisRemoteSaiInterface::notifyCounterGroupOperations(
 
 sai_status_t RedisRemoteSaiInterface::notifyCounterOperations(
         _In_ sai_object_id_t objectId,
-        _In_ const sai_attribute_t *attr)
+        _In_ const sai_redis_flex_counter_parameter_t *flexCounterParam)
 {
-    auto *param = reinterpret_cast<sai_redis_flex_counter_parameter_t*>(attr->value.ptr);
     std::vector<swss::FieldValueTuple> entries;
-    std::string key(param->counter_key);
+    std::string key(flexCounterParam->counter_key);
     std::string command;
 
-    if (param->counter_ids != nullptr)
+    if (flexCounterParam->counter_ids != nullptr)
     {
-        entries.push_back({param->counter_field_name, param->counter_ids});
+        entries.push_back({flexCounterParam->counter_field_name, flexCounterParam->counter_ids});
         command = REDIS_FLEX_COUNTER_COMMAND_START_POLL;
-        if (param->stats_mode != nullptr)
+        if (flexCounterParam->stats_mode != nullptr)
         {
-            entries.push_back({STATS_MODE_FIELD, param->stats_mode});
+            entries.push_back({STATS_MODE_FIELD, flexCounterParam->stats_mode});
         }
     }
     else
