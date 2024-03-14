@@ -53,6 +53,7 @@ TEST(RedisRemoteSaiInterface, notifyCounterOperations)
     flexCounterParam.counter_key = "oid:0x15000000000001";
     flexCounterParam.counter_ids = "SAI_QUEUE_STAT_SHARED_WATERMARK_BYTES";
     flexCounterParam.counter_field_name = "QUEUE_COUNTER_ID_LIST";
+    flexCounterParam.stats_mode = nullptr;
 
     attr.id = SAI_REDIS_SWITCH_ATTR_FLEX_COUNTER;
     attr.value.ptr = (void*)&flexCounterParam;
