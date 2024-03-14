@@ -497,6 +497,8 @@ sai_status_t RedisRemoteSaiInterface::notifyCounterGroupOperations(
         _In_ sai_object_id_t objectId,
         _In_ const sai_redis_flex_counter_group_parameter_t *flexCounterGroupParam)
 {
+    SWSS_LOG_ENTER();
+
     std::vector<swss::FieldValueTuple> entries;
 
     if (flexCounterGroupParam == nullptr || flexCounterGroupParam->counter_group_name == nullptr)
@@ -536,6 +538,8 @@ sai_status_t RedisRemoteSaiInterface::notifyCounterOperations(
         _In_ sai_object_id_t objectId,
         _In_ const sai_redis_flex_counter_parameter_t *flexCounterParam)
 {
+    SWSS_LOG_ENTER();
+
     std::vector<swss::FieldValueTuple> entries;
     std::string key(flexCounterParam->counter_key);
     std::string command;
