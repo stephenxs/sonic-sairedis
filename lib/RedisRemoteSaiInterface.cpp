@@ -482,7 +482,7 @@ sai_status_t RedisRemoteSaiInterface::setRedisExtensionAttribute(
 
         case SAI_REDIS_SWITCH_ATTR_FLEX_COUNTER:
             return notifyCounterOperations(objectId,
-                                                reinterpret_cast<sai_redis_flex_counter_parameter_t*>(attr->value.ptr));
+                                           reinterpret_cast<sai_redis_flex_counter_parameter_t*>(attr->value.ptr));
 
         default:
             break;
@@ -539,6 +539,11 @@ sai_status_t RedisRemoteSaiInterface::notifyCounterOperations(
         _In_ const sai_redis_flex_counter_parameter_t *flexCounterParam)
 {
     SWSS_LOG_ENTER();
+
+    if (flexCounterParam == nullptr)
+    {
+        return SAI_STATUS_FAILURE;
+    }
 
     std::vector<swss::FieldValueTuple> entries;
     std::string key(flexCounterParam->counter_key);
