@@ -493,6 +493,25 @@ sai_status_t RedisRemoteSaiInterface::setRedisExtensionAttribute(
     return SAI_STATUS_FAILURE;
 }
 
+bool RedisRemoteSaiInterface::isSaiS8ListValidString(const sai_s8_list_t &s8list, const char* hint)
+{
+    if (s8list.list != nullptr)
+    {
+        size_t len = strnlen((const char *)s8list.list, s8list.count);
+
+        if (len == (size_t)s8list.count)
+        {
+            return true;
+        }
+        else
+        {
+            SWSS_LOG_ERROR("%s: count (%u) is different than strnlen (%zu)", hint, s8list.count, len);
+        }
+    }
+
+    return false;
+}
+
 sai_status_t RedisRemoteSaiInterface::notifyCounterGroupOperations(
         _In_ sai_object_id_t objectId,
         _In_ const sai_redis_flex_counter_group_parameter_t *flexCounterGroupParam)
@@ -501,31 +520,36 @@ sai_status_t RedisRemoteSaiInterface::notifyCounterGroupOperations(
 
     std::vector<swss::FieldValueTuple> entries;
 
-    if (flexCounterGroupParam == nullptr || flexCounterGroupParam->counter_group_name == nullptr)
+    if (flexCounterGroupParam == nullptr || !isSaiS8ListValidString(flexCounterGroupParam->counter_group_name, "COUNTER_GROUP_NAME"))
     {
+        SWSS_LOG_ERROR("Invalid parameters when handling counter group operation");
         return SAI_STATUS_FAILURE;
     }
 
-    std::string key(flexCounterGroupParam->counter_group_name);
+    std::string key((const char*)flexCounterGroupParam->counter_group_name.list);
 
-    if (flexCounterGroupParam->poll_interval != nullptr)
+    if (isSaiS8ListValidString(flexCounterGroupParam->poll_interval, POLL_INTERVAL_FIELD))
     {
-        entries.push_back({POLL_INTERVAL_FIELD, flexCounterGroupParam->poll_interval});
+        entries.emplace_back(POLL_INTERVAL_FIELD,
+                             std::string((const char*)flexCounterGroupParam->poll_interval.list, flexCounterGroupParam->poll_interval.count));
     }
 
-    if (flexCounterGroupParam->stats_mode != nullptr)
+    if (isSaiS8ListValidString(flexCounterGroupParam->stats_mode, STATS_MODE_FIELD))
     {
-        entries.push_back({STATS_MODE_FIELD, flexCounterGroupParam->stats_mode});
+        entries.emplace_back(STATS_MODE_FIELD,
+                             std::string((const char*)flexCounterGroupParam->stats_mode.list, flexCounterGroupParam->stats_mode.count));
     }
 
-    if (flexCounterGroupParam->plugins != nullptr && flexCounterGroupParam->plugin_name != nullptr)
+    if (isSaiS8ListValidString(flexCounterGroupParam->plugins, "PLUGINS") && isSaiS8ListValidString(flexCounterGroupParam->plugin_name, "PLUGIN_NAME"))
     {
-        entries.push_back({flexCounterGroupParam->plugin_name, flexCounterGroupParam->plugins});
+        entries.emplace_back(std::string((const char*)flexCounterGroupParam->plugin_name.list, flexCounterGroupParam->plugin_name.count),
+                             std::string((const char*)flexCounterGroupParam->plugins.list, flexCounterGroupParam->plugins.count));
     }
 
-    if (flexCounterGroupParam->operation != nullptr)
+    if (isSaiS8ListValidString(flexCounterGroupParam->operation, FLEX_COUNTER_STATUS_FIELD))
     {
-        entries.push_back({FLEX_COUNTER_STATUS_FIELD, flexCounterGroupParam->operation});
+        entries.emplace_back(FLEX_COUNTER_STATUS_FIELD,
+                             std::string((const char*)flexCounterGroupParam->operation.list, flexCounterGroupParam->operation.count));
     }
 
     m_recorder->recordGenericSet(key, entries);
@@ -540,22 +564,25 @@ sai_status_t RedisRemoteSaiInterface::notifyCounterOperations(
 {
     SWSS_LOG_ENTER();
 
-    if (flexCounterParam == nullptr)
+    if (flexCounterParam == nullptr || !isSaiS8ListValidString(flexCounterParam->counter_key, "COUNTER_KEY"))
     {
+        SWSS_LOG_ERROR("Invalid parameters when handling counter operation");
         return SAI_STATUS_FAILURE;
     }
 
     std::vector<swss::FieldValueTuple> entries;
-    std::string key(flexCounterParam->counter_key);
+    std::string key((const char*)flexCounterParam->counter_key.list);
     std::string command;
 
-    if (flexCounterParam->counter_ids != nullptr)
+    if (isSaiS8ListValidString(flexCounterParam->counter_ids, "COUNTER_IDS") && isSaiS8ListValidString(flexCounterParam->counter_field_name, "COUNTER_FIELD_NAME"))
     {
-        entries.push_back({flexCounterParam->counter_field_name, flexCounterParam->counter_ids});
+        entries.emplace_back(std::string((const char*)flexCounterParam->counter_field_name.list, flexCounterParam->counter_field_name.count),
+                             std::string((const char*)flexCounterParam->counter_ids.list, flexCounterParam->counter_ids.count));
         command = REDIS_FLEX_COUNTER_COMMAND_START_POLL;
-        if (flexCounterParam->stats_mode != nullptr)
+        if (isSaiS8ListValidString(flexCounterParam->stats_mode, STATS_MODE_FIELD))
         {
-            entries.push_back({STATS_MODE_FIELD, flexCounterParam->stats_mode});
+            entries.emplace_back(std::string(STATS_MODE_FIELD),
+                                 std::string((const char*)flexCounterParam->stats_mode.list, flexCounterParam->stats_mode.count));
         }
     }
     else

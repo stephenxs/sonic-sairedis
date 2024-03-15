@@ -343,6 +343,9 @@ namespace sairedis
                     _In_ sai_object_id_t objectId,
                     _In_ const sai_attribute_t *attr);
 
+            bool isSaiS8ListValidString(const sai_s8_list_t &s8list,
+                                        const char *hint);
+
             sai_status_t notifyCounterGroupOperations(
                     _In_ sai_object_id_t objectId,
                     _In_ const sai_redis_flex_counter_group_parameter_t *flexCounterGroupParam);

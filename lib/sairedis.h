@@ -97,8 +97,8 @@ typedef enum _sai_redis_communication_mode_t
  *
  * The struct sai_redis_flex_counter_group_parameter_t represents the counter group operations.
  * The caller (usually orchagent) can change some or all the options of a counter group.
- * The counter_group_name represents the counter group name which must be a valid pointer.
- * For the rest fields, it means not changing it to pass a null pointer.
+ * The counter_group_name represents the counter group name which must be a valid list.
+ * For the rest fields, it means not changing it to pass an empty list.
  */
 typedef struct _sai_redis_flex_counter_group_parameter_t
 {
@@ -107,38 +107,38 @@ typedef struct _sai_redis_flex_counter_group_parameter_t
      *
      * It is the key of FLEX_COUNTER_TABLE and FLEX_COUNTER_GROUP_TABLE table.
      */
-    const char *counter_group_name;
+    sai_s8_list_t counter_group_name;
 
     /**
      * @brief The polling interval of the counter group
      *
      * It should be a number representing the polling interval in seconds.
      */
-    const char *poll_interval;
+    sai_s8_list_t poll_interval;
 
     /**
      * @brief The operation of the counter group
      *
      * It should be either "enable" or "disable"
      */
-    const char *operation;
+    sai_s8_list_t operation;
 
     /**
      * @brief The counter fetching mode.
      *
      * It should be either "STATS_MODE_READ" or "STATS_MODE_READ_AND_CLEAR"
      */
-    const char *stats_mode;
+    sai_s8_list_t stats_mode;
 
     /**
      * @brief The name of the filed that represents the Lua plugin
      */
-    const char *plugin_name;
+    sai_s8_list_t plugin_name;
 
     /**
      * @brief The SHA code of the Lua plugin
      */
-    const char *plugins;
+    sai_s8_list_t plugins;
 
 } sai_redis_flex_counter_group_parameter_t;
 
@@ -149,22 +149,22 @@ typedef struct _sai_redis_flex_counter_parameter_t
      *
      * It should be the serialized OID eg. "oid:0x15000000000001"
      */
-    const char *counter_key;
+    sai_s8_list_t counter_key;
 
     /**
      * @brief The list of counters' IDs that should be fetched.
      */
-    const char *counter_ids;
+    sai_s8_list_t counter_ids;
 
     /**
      * @brief The name of the filed that represents the counters' IDs.
      */
-    const char *counter_field_name;
+    sai_s8_list_t counter_field_name;
 
     /**
      * @brief The counter fetch mode of the object.
      */
-    const char *stats_mode;
+    sai_s8_list_t stats_mode;
 
 } sai_redis_flex_counter_parameter_t;
 
