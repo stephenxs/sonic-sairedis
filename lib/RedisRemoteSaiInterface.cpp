@@ -495,6 +495,8 @@ sai_status_t RedisRemoteSaiInterface::setRedisExtensionAttribute(
 
 bool RedisRemoteSaiInterface::isSaiS8ListValidString(const sai_s8_list_t &s8list, const char* hint)
 {
+    SWSS_LOG_ENTER();
+
     if (s8list.list != nullptr)
     {
         size_t len = strnlen((const char *)s8list.list, s8list.count);
