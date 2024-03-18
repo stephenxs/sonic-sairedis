@@ -54,7 +54,8 @@
 
 #define REDIS_FLEX_COUNTER_COMMAND_START_POLL       "start_poll"
 #define REDIS_FLEX_COUNTER_COMMAND_STOP_POLL        "stop_poll"
-#define REDIS_FLEX_COUNTER_COMMAND_COUNTER_GROUP    "counter_group"
+#define REDIS_FLEX_COUNTER_COMMAND_SET_GROUP        "set_counter_group"
+#define REDIS_FLEX_COUNTER_COMMAND_DEL_GROUP        "del_counter_group"
 #define REDIS_FLEX_COUNTER_COMMAND_RESPONSE         "counter_response"
 /**
  * @brief Redis virtual object id counter key name.

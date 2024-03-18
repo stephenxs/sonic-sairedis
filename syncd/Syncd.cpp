@@ -402,10 +402,20 @@ sai_status_t Syncd::processSingleEvent(
         return SAI_STATUS_SUCCESS;
     }
 
-    if (op == REDIS_FLEX_COUNTER_COMMAND_COUNTER_GROUP)
+    if (op == REDIS_FLEX_COUNTER_COMMAND_SET_GROUP)
     {
         std::vector<swss::FieldValueTuple> values = kfvFieldsValues(kco);
         processFlexCounterGroupEvent(key, "SET", values);
+
+        sendApiResponse(SAI_COMMON_API_SET, SAI_STATUS_SUCCESS);
+
+        return SAI_STATUS_SUCCESS;
+    }
+
+    if (op == REDIS_FLEX_COUNTER_COMMAND_DEL_GROUP)
+    {
+        std::vector<swss::FieldValueTuple> values = kfvFieldsValues(kco);
+        processFlexCounterGroupEvent(key, "DEL", values);
 
         sendApiResponse(SAI_COMMON_API_SET, SAI_STATUS_SUCCESS);
 

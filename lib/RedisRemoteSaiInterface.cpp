@@ -555,7 +555,10 @@ sai_status_t RedisRemoteSaiInterface::notifyCounterGroupOperations(
     }
 
     m_recorder->recordGenericSet(key, entries);
-    m_communicationChannel->set(key, entries, REDIS_FLEX_COUNTER_COMMAND_COUNTER_GROUP);
+
+    m_communicationChannel->set(key,
+                                entries,
+                                (entries.size() != 0) ? REDIS_FLEX_COUNTER_COMMAND_SET_GROUP : REDIS_FLEX_COUNTER_COMMAND_DEL_GROUP);
 
     return waitForResponse(SAI_COMMON_API_SET);
 }
