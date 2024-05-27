@@ -353,6 +353,11 @@ sai_status_t VendorSai::queryObjectStatsCapability(
     SWSS_LOG_ENTER();
     VENDOR_CHECK_API_INITIALIZED();
 
+    if (nullptr == m_globalApis.query_object_stats_capability)
+    {
+        return SAI_STATUS_NOT_IMPLEMENTED;
+    }
+
     return m_globalApis.query_object_stats_capability(
             switchId,
             objectKey,
