@@ -786,6 +786,51 @@ private:
             _In_ const std::vector<StatType>& counter_ids)
     {
         SWSS_LOG_ENTER();
+
+        bool using_legacy_mode = false;
+
+        sai_stat_capability_list_t stats_capability;
+        stats_capability.count = 0;
+        stats_capability.list = nullptr;
+
+        /* First call is to check the size needed to allocate */
+        sai_object_key_t key = {.key.object_id = rid};
+        sai_status_t status = m_vendorSai->queryObjectStatsCapability(
+            rid,
+            key,
+            m_objectType,
+            &stats_capability);
+
+        /* Second call is for query statistics capability */
+        if (status == SAI_STATUS_BUFFER_OVERFLOW)
+        {
+            std::vector<sai_stat_capability_t> statCapabilityList(stats_capability.count);
+            stats_capability.list = statCapabilityList.data();
+            status = m_vendorSai->queryObjectStatsCapability(
+                rid,
+                key,
+                m_objectType,
+                &stats_capability);
+
+            if (status != SAI_STATUS_SUCCESS)
+            {
+                SWSS_LOG_INFO("Unable to get %s supported counters for %s",
+                    m_name.c_str(),
+                    sai_serialize_object_id(rid).c_str());
+            }
+            else
+            {
+                set<StatType> supportedCounters;
+                for (auto statCapability: statCapabilityList)
+                {
+                    StatType counter = static_cast<StatType>(statCapability.stat_enum);
+                    supportedCounters.insert(counter);
+                }
+                stat<StatType> expectedCounters(counter_ids.begin(), counter_ids.end());
+                return expectedCounters == supportedCounters;
+            }
+        }
+
         BulkContextType ctx;
         addBulkStatsContext(vid, rid, counter_ids, ctx);
         auto statsMode = m_groupStatsMode == SAI_STATS_MODE_READ ? SAI_STATS_MODE_BULK_READ : SAI_STATS_MODE_BULK_READ_AND_CLEAR;
