@@ -207,6 +207,13 @@ namespace syncd
             virtual sai_log_level_t logGet(
                     _In_ sai_api_t api) override;
 
+        public:
+            sai_status_t queryObjectStatsCapability(
+                    _In_ sai_object_id_t switch_id,
+                    _In_ sai_object_key_t object_key,
+                    _In_ sai_object_type_t object_type,
+                    _Inout_ sai_stat_capability_list_t *stats_capability);
+
         private:
 
             bool m_apiInitialized;
