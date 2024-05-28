@@ -1,6 +1,7 @@
 #include "config.h"
 #include "VendorSai.h"
 
+
 #include "meta/sai_serialize.h"
 
 #include "swss/logger.h"
@@ -52,7 +53,7 @@ VendorSai::VendorSai()
         .query_attribute_capability = &sai_query_attribute_capability,
         .query_attribute_enum_values_capability = &sai_query_attribute_enum_values_capability,
         .query_object_stage = nullptr,
-        //.query_object_stats_capability = nullptr,
+        .query_object_stats_capability = &sai_query_object_stats_capability,
         .query_stats_capability = &sai_query_stats_capability,
         .switch_id_query = &sai_switch_id_query,
         .tam_telemetry_get_data = nullptr,
@@ -352,8 +353,7 @@ sai_status_t VendorSai::queryObjectStatsCapability(
     MUTEX();
     SWSS_LOG_ENTER();
     VENDOR_CHECK_API_INITIALIZED();
-        return SAI_STATUS_NOT_IMPLEMENTED;
-#if 0
+
     if (nullptr == m_globalApis.query_object_stats_capability)
     {
         return SAI_STATUS_NOT_IMPLEMENTED;
@@ -364,7 +364,6 @@ sai_status_t VendorSai::queryObjectStatsCapability(
             objectKey,
             objectType,
             stats_capability);
-#endif
 }
 
 sai_status_t VendorSai::getStatsExt(
