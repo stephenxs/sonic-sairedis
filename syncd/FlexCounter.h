@@ -24,6 +24,8 @@ namespace syncd
         void addPlugins(
             _In_ const std::vector<std::string>& shaStrings);
 
+        void setBulkSize(uint32_t bulkSize);
+
         bool hasPlugin() const {return !m_plugins.empty();}
 
         void removePlugins() {m_plugins.clear();}
@@ -55,6 +57,7 @@ namespace syncd
         bool use_sai_stats_capa_query = true;
         bool use_sai_stats_ext = false;
         bool double_confirm_supported_counters = false;
+        uint32_t default_bulk_size = 0;
     };
     class FlexCounter
     {
