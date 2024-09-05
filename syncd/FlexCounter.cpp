@@ -73,6 +73,13 @@ void BaseCounterContext::setNoDoubleCheckBulkCapability(
     no_double_check_bulk_capability = noDoubleCheckBulkCapability;
 }
 
+void BaseCounterContext::setBulkChunkSize(
+    _In_ uint32_t bulkChunkSize)
+{
+    SWSS_LOG_ENTER();
+    default_bulk_chunk_size = bulkChunkSize;
+}
+
 template <typename StatType,
           typename Enable = void>
 struct CounterIds
@@ -610,6 +617,9 @@ public:
         {
             return;
         }
+
+        SWSS_LOG_INFO("Before running plugin %s", m_name.c_str());
+
         std::vector<std::string> idStrings;
         idStrings.reserve(m_objectIdsMap.size());
         std::transform(m_objectIdsMap.begin(),
@@ -628,6 +638,8 @@ public:
         std::for_each(m_plugins.begin(),
                       m_plugins.end(),
                       [&] (auto &sha) { runRedisScript(counters_db, sha, idStrings, argv); });
+
+        SWSS_LOG_INFO("After running plugin %s", m_name.c_str());
     }
 
     bool hasObject() const override
@@ -730,19 +742,40 @@ private:
     {
         SWSS_LOG_ENTER();
         auto statsMode = m_groupStatsMode == SAI_STATS_MODE_READ ? SAI_STATS_MODE_BULK_READ : SAI_STATS_MODE_BULK_READ_AND_CLEAR;
-        sai_status_t status = m_vendorSai->bulkGetStats(
-                            SAI_NULL_OBJECT_ID,
-                            m_objectType,
-                            static_cast<uint32_t>(ctx.object_keys.size()),
-                            ctx.object_keys.data(),
-                            static_cast<uint32_t>(ctx.counter_ids.size()),
-                            reinterpret_cast<const sai_stat_id_t *>(ctx.counter_ids.data()),
-                            statsMode,
-                            ctx.object_statuses.data(),
-                            ctx.counters.data());
-        if (SAI_STATUS_SUCCESS != status)
+        uint32_t bulk_chunk_size = default_bulk_chunk_size;
+        uint32_t size = static_cast<uint32_t>(ctx.object_keys.size());
+        if (bulk_chunk_size > size || bulk_chunk_size == 0)
         {
-            SWSS_LOG_WARN("Failed to bulk get stats for %s: %u", m_name.c_str(), status);
+            bulk_chunk_size = size;
+        }
+        uint32_t current = 0;
+
+        SWSS_LOG_INFO("Before getting bulk %s size %u bulk_chunk_size %u current %u", m_name.c_str(), size, bulk_chunk_size, current);
+
+        while (current < size)
+        {
+            sai_status_t status = m_vendorSai->bulkGetStats(
+                SAI_NULL_OBJECT_ID,
+                m_objectType,
+                bulk_chunk_size,
+                ctx.object_keys.data() + current,
+                static_cast<uint32_t>(ctx.counter_ids.size()),
+                reinterpret_cast<const sai_stat_id_t *>(ctx.counter_ids.data()),
+                statsMode,
+                ctx.object_statuses.data() + current,
+                ctx.counters.data() + current * ctx.counter_ids.size());
+            if (SAI_STATUS_SUCCESS != status)
+            {
+                SWSS_LOG_WARN("Failed to bulk get stats for %s: %u", m_name.c_str(), status);
+            }
+            current += bulk_chunk_size;
+
+            SWSS_LOG_INFO("After getting bulk %s index %u(advanced to %u) bulk_chunk_size %u", m_name.c_str(), current - bulk_chunk_size, current, bulk_chunk_size);
+
+            if (size - current < bulk_chunk_size)
+            {
+                bulk_chunk_size = size - current;
+            }
         }
 
         std::vector<swss::FieldValueTuple> values;
@@ -762,6 +795,8 @@ private:
             countersTable.set(sai_serialize_object_id(vid), values, "");
             values.clear();
         }
+
+        SWSS_LOG_INFO("After pushing db %s", m_name.c_str());
     }
 
     auto getBulkStatsContext(
@@ -1516,6 +1551,7 @@ void FlexCounter::addCounterPlugin(
     SWSS_LOG_ENTER();
 
     m_isDiscarded = false;
+    uint32_t bulkChunkSize = 0;
 
     for (auto& fvt: values)
     {
@@ -1527,6 +1563,15 @@ void FlexCounter::addCounterPlugin(
         if (field == POLL_INTERVAL_FIELD)
         {
             setPollInterval(stoi(value));
+        }
+        else if (field == BULK_CHUNK_SIZE_FIELD)
+        {
+            bulkChunkSize = stoi(value);
+            for (auto &context : m_counterContext)
+            {
+                context.second->setBulkChunkSize(bulkChunkSize);
+                SWSS_LOG_NOTICE("Set counter context %s %s bulk size %u", m_instanceId.c_str(), COUNTER_TYPE_PORT.c_str(), bulkChunkSize);
+            }
         }
         else if (field == FLEX_COUNTER_STATUS_FIELD)
         {
@@ -1549,6 +1594,12 @@ void FlexCounter::addCounterPlugin(
                     getCounterContext(counterTypeRef->second)->setNoDoubleCheckBulkCapability(true);
 
                     SWSS_LOG_NOTICE("Do not double check bulk capability counter context %s %s", m_instanceId.c_str(), counterTypeRef->second.c_str());
+                }
+
+                if (bulkChunkSize > 0)
+                {
+                    getCounterContext(counterTypeRef->second)->setBulkChunkSize(bulkChunkSize);
+                    SWSS_LOG_NOTICE("Create counter context %s %s with bulk size %u", m_instanceId.c_str(), counterTypeRef->second.c_str(), bulkChunkSize);
                 }
             }
             else
