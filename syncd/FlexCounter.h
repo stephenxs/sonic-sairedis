@@ -27,6 +27,9 @@ namespace syncd
         void setNoDoubleCheckBulkCapability(
             _In_ bool);
 
+        void setBulkSize(
+            _In_ uint32_t bulkSize);
+
         bool hasPlugin() const {return !m_plugins.empty();}
 
         void removePlugins() {m_plugins.clear();}
@@ -59,6 +62,7 @@ namespace syncd
         bool use_sai_stats_ext = false;
         bool double_confirm_supported_counters = false;
         bool no_double_check_bulk_capability = false;
+        uint32_t default_bulk_size = 0;
     };
     class FlexCounter
     {
