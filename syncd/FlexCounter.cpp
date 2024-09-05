@@ -460,7 +460,8 @@ public:
         }
         else
         {
-            supportBulk = checkBulkCapability(vid, rid, supportedIds);
+            supportBulk = true;//checkBulkCapability(vid, rid, supportedIds);
+            //SWSS_LOG_NOTICE("%s VID %s %s bulk",  m_name.c_str(), sai_serialize_object_id(vid).c_str(), supportBulk ? "supports" : "does not support");
         }
 
         if (!supportBulk)
