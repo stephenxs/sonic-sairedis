@@ -140,6 +140,13 @@ typedef struct _sai_redis_flex_counter_group_parameter_t
      */
     sai_s8_list_t plugins;
 
+    /**
+     * @brief The bulk chunk size of the counter group
+     *
+     * It should be a number representing the bulk chunk size.
+     */
+    sai_s8_list_t bulk_chunk_size;
+
 } sai_redis_flex_counter_group_parameter_t;
 
 typedef struct _sai_redis_flex_counter_parameter_t
