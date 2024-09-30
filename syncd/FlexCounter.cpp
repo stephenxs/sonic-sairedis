@@ -1002,12 +1002,14 @@ public:
 FlexCounter::FlexCounter(
         _In_ const std::string& instanceId,
         _In_ std::shared_ptr<sairedis::SaiInterface> vendorSai,
-        _In_ const std::string& dbCounters):
+        _In_ const std::string& dbCounters,
+        _In_ const bool noDoubleCheckBulkCapability):
     m_readyToPoll(false),
     m_pollInterval(0),
     m_instanceId(instanceId),
     m_vendorSai(vendorSai),
-    m_dbCounters(dbCounters)
+    m_dbCounters(dbCounters),
+    m_noDoubleCheckBulkCapability(noDoubleCheckBulkCapability)
 {
     SWSS_LOG_ENTER();
 
@@ -1150,6 +1152,12 @@ void FlexCounter::addCounterPlugin(
             if (counterTypeRef != plugIn2CounterType.end())
             {
                 getCounterContext(counterTypeRef->second)->addPlugins(shaStrings);
+
+                if (m_noDoubleCheckBulkCapability)
+                {
+                    getCounterContext(counterTypeRef->second)->setNoDoubleCheckBulkCapability(true);
+                    SWSS_LOG_NOTICE("Do not double check bulk capability counter context %s %s", m_instanceId.c_str(), counterTypeRef->second.c_str());
+                }
             }
             else
             {

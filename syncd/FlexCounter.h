@@ -65,7 +65,8 @@ namespace syncd
             FlexCounter(
                     _In_ const std::string& instanceId,
                     _In_ std::shared_ptr<sairedis::SaiInterface> vendorSai,
-                    _In_ const std::string& dbCounters);
+                    _In_ const std::string& dbCounters,
+                    _In_ const bool noDoubleCheckBulkCapability);
 
             virtual ~FlexCounter();
 
@@ -168,5 +169,7 @@ namespace syncd
             bool m_isDiscarded;
 
             std::map<std::string, std::shared_ptr<BaseCounterContext>> m_counterContext;
+
+            bool m_noDoubleCheckBulkCapability;
     };
 }
