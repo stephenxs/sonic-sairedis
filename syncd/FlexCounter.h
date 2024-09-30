@@ -20,7 +20,7 @@ namespace syncd
     class BaseCounterContext
     {
     public:
-        BaseCounterContext(const std::string &name);
+        BaseCounterContext(const std::string &name, const std::string &instance);
         void addPlugins(
             _In_ const std::vector<std::string>& shaStrings);
 
@@ -54,6 +54,7 @@ namespace syncd
 
     protected:
         std::string m_name;
+        std::string m_instanceId;
         std::set<std::string> m_plugins;
 
     public:
@@ -122,7 +123,8 @@ namespace syncd
                     _In_ const std::string &name);
 
             std::shared_ptr<BaseCounterContext> createCounterContext(
-                    _In_ const std::string &name);
+                    _In_ const std::string &name,
+                    _In_ const std::string &instance);
 
             void removeCounterContext(
                     _In_ const std::string &name);
