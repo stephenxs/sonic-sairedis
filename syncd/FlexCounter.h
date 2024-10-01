@@ -24,6 +24,8 @@ namespace syncd
         void addPlugins(
             _In_ const std::vector<std::string>& shaStrings);
 
+        void setNoDoubleCheckBulkCapability(bool);
+
         bool hasPlugin() const {return !m_plugins.empty();}
 
         void removePlugins() {m_plugins.clear();}
@@ -44,6 +46,8 @@ namespace syncd
                 _In_ swss::DBConnector& counters_db,
                 _In_ const std::vector<std::string>& argv) = 0;
 
+
+
         virtual bool hasObject() const = 0;
 
     protected:
@@ -55,6 +59,7 @@ namespace syncd
         bool use_sai_stats_capa_query = true;
         bool use_sai_stats_ext = false;
         bool double_confirm_supported_counters = false;
+        bool no_double_check_bulk_capability = false;
     };
     class FlexCounter
     {

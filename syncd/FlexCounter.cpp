@@ -56,6 +56,12 @@ void BaseCounterContext::addPlugins(
     }
 }
 
+void BaseCounterContext::setNoDoubleCheckBulkCapability(bool noDoubleCheckBulkCapability)
+{
+    SWSS_LOG_ENTER();
+    no_double_check_bulk_capability = noDoubleCheckBulkCapability;
+}
+
 template <typename StatType,
           typename Enable = void>
 struct CounterIds
