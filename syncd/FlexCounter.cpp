@@ -466,7 +466,7 @@ public:
         }
         else
         {
-            supportBulk = checkBulkCapability(vid, rid, supportedIds);
+            supportBulk = no_double_check_bulk_capability || checkBulkCapability(vid, rid, supportedIds);
         }
 
         if (!supportBulk)
