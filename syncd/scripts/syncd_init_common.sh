@@ -26,9 +26,12 @@ else
     CMD_ARGS=
 fi
 
-# Use temporary view between init and apply except when in fast-reboot
-if [[ "$(cat /proc/cmdline)" != *"SONIC_BOOT_TYPE=fast-reboot"* ]]; then
-    CMD_ARGS+=" -u"
+# Use temporary view between init view and apply view
+CMD_ARGS+=" -u"
+
+SUPPORTING_BULK_COUNTER_GROUPS=$(echo $SYNCD_VARS | jq -r '.supporting_bulk_counter_groups')
+if [ "$SUPPORTING_BULK_COUNTER_GROUPS" != "" ]; then
+    CMD_ARGS+=" -B $SUPPORTING_BULK_COUNTER_GROUPS"
 fi
 
 # Create a folder for SAI failure dump files
