@@ -56,6 +56,12 @@ void BaseCounterContext::addPlugins(
     }
 }
 
+void BaseCounterContext::setNoDoubleCheckBulkCapability(bool noDoubleCheckBulkCapability)
+{
+    SWSS_LOG_ENTER();
+    no_double_check_bulk_capability = noDoubleCheckBulkCapability;
+}
+
 template <typename StatType,
           typename Enable = void>
 struct CounterIds
@@ -460,7 +466,7 @@ public:
         }
         else
         {
-            supportBulk = checkBulkCapability(vid, rid, supportedIds);
+            supportBulk = no_double_check_bulk_capability || checkBulkCapability(vid, rid, supportedIds);
         }
 
         if (!supportBulk)
@@ -1002,12 +1008,14 @@ public:
 FlexCounter::FlexCounter(
         _In_ const std::string& instanceId,
         _In_ std::shared_ptr<sairedis::SaiInterface> vendorSai,
-        _In_ const std::string& dbCounters):
+        _In_ const std::string& dbCounters,
+        _In_ const bool noDoubleCheckBulkCapability):
     m_readyToPoll(false),
     m_pollInterval(0),
     m_instanceId(instanceId),
     m_vendorSai(vendorSai),
-    m_dbCounters(dbCounters)
+    m_dbCounters(dbCounters),
+    m_noDoubleCheckBulkCapability(noDoubleCheckBulkCapability)
 {
     SWSS_LOG_ENTER();
 
@@ -1135,37 +1143,32 @@ void FlexCounter::addCounterPlugin(
         {
             setStatsMode(value);
         }
-        else if (field == QUEUE_PLUGIN_FIELD)
-        {
-            getCounterContext(COUNTER_TYPE_QUEUE)->addPlugins(shaStrings);
-        }
-        else if (field == PG_PLUGIN_FIELD)
-        {
-            getCounterContext(COUNTER_TYPE_PG)->addPlugins(shaStrings);
-        }
-        else if (field == PORT_PLUGIN_FIELD)
-        {
-            getCounterContext(COUNTER_TYPE_PORT)->addPlugins(shaStrings);
-        }
-        else if (field == RIF_PLUGIN_FIELD)
-        {
-            getCounterContext(COUNTER_TYPE_RIF)->addPlugins(shaStrings);
-        }
-        else if (field == BUFFER_POOL_PLUGIN_FIELD)
-        {
-            getCounterContext(COUNTER_TYPE_BUFFER_POOL)->addPlugins(shaStrings);
-        }
-        else if (field == TUNNEL_PLUGIN_FIELD)
-        {
-            getCounterContext(COUNTER_TYPE_TUNNEL)->addPlugins(shaStrings);
-        }
-        else if (field == FLOW_COUNTER_PLUGIN_FIELD)
-        {
-            getCounterContext(COUNTER_TYPE_FLOW)->addPlugins(shaStrings);
-        }
         else
         {
-            SWSS_LOG_ERROR("Field is not supported %s", field.c_str());
+            std::map<std::string, std::string> plugIn2CounterType = {
+                {QUEUE_PLUGIN_FIELD, COUNTER_TYPE_QUEUE},
+                {PG_PLUGIN_FIELD, COUNTER_TYPE_PG},
+                {PORT_PLUGIN_FIELD, COUNTER_TYPE_PORT},
+                {RIF_PLUGIN_FIELD, COUNTER_TYPE_RIF},
+                {BUFFER_POOL_PLUGIN_FIELD, COUNTER_TYPE_BUFFER_POOL},
+                {TUNNEL_PLUGIN_FIELD, COUNTER_TYPE_TUNNEL},
+                {FLOW_COUNTER_PLUGIN_FIELD, COUNTER_TYPE_FLOW}};
+
+            auto counterTypeRef = plugIn2CounterType.find(field);
+            if (counterTypeRef != plugIn2CounterType.end())
+            {
+                getCounterContext(counterTypeRef->second)->addPlugins(shaStrings);
+
+                if (m_noDoubleCheckBulkCapability)
+                {
+                    getCounterContext(counterTypeRef->second)->setNoDoubleCheckBulkCapability(true);
+                    SWSS_LOG_NOTICE("Do not double check bulk capability counter context %s %s", m_instanceId.c_str(), counterTypeRef->second.c_str());
+                }
+            }
+            else
+            {
+                SWSS_LOG_ERROR("Field is not supported %s", field.c_str());
+            }
         }
     }
 
