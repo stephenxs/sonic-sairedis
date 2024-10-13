@@ -620,7 +620,7 @@ public:
             return;
         }
 
-        SWSS_LOG_INFO("Before running plugin %s", m_name.c_str());
+        SWSS_LOG_INFO("Before running plugin %s %s", m_instanceId.c_str(), m_name.c_str());
 
         std::vector<std::string> idStrings;
         idStrings.reserve(m_objectIdsMap.size());
@@ -641,7 +641,7 @@ public:
                       m_plugins.end(),
                       [&] (auto &sha) { runRedisScript(counters_db, sha, idStrings, argv); });
 
-        SWSS_LOG_INFO("After running plugin %s", m_name.c_str());
+        SWSS_LOG_INFO("After running plugin %s %s", m_instanceId.c_str(), m_name.c_str());
     }
 
     bool hasObject() const override
@@ -752,7 +752,7 @@ private:
         }
         uint32_t current = 0;
 
-        SWSS_LOG_INFO("Before getting bulk %s size %u bulk_chunk_size %u current %u", m_name.c_str(), size, bulk_chunk_size, current);
+        SWSS_LOG_INFO("Before getting bulk %s %s size %u bulk chunk size %u current %u", m_instanceId.c_str(), m_name.c_str(), size, bulk_chunk_size, current);
 
         while (current < size)
         {
@@ -772,7 +772,7 @@ private:
             }
             current += bulk_chunk_size;
 
-            SWSS_LOG_INFO("After getting bulk %s index %u(advanced to %u) bulk_chunk_size %u", m_name.c_str(), current - bulk_chunk_size, current, bulk_chunk_size);
+            SWSS_LOG_INFO("After getting bulk %s %s index %u(advanced to %u) bulk chunk size %u", m_instanceId.c_str(), m_name.c_str(), current - bulk_chunk_size, current, bulk_chunk_size);
 
             if (size - current < bulk_chunk_size)
             {
@@ -801,7 +801,7 @@ private:
             values.clear();
         }
 
-        SWSS_LOG_INFO("After pushing db %s", m_name.c_str());
+        SWSS_LOG_INFO("After pushing db %s %s", m_instanceId.c_str(), m_name.c_str());
     }
 
     auto getBulkStatsContext(
