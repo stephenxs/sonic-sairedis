@@ -1748,7 +1748,7 @@ std::shared_ptr<BaseCounterContext> FlexCounter::createCounterContext(
     }
     else if (context_name == COUNTER_TYPE_ENI)
     {
-        auto context = std::make_shared<CounterContext<sai_eni_stat_t>>(context_name, (sai_object_type_t)SAI_OBJECT_TYPE_ENI, m_vendorSai.get(), m_statsMode);
+        auto context = std::make_shared<CounterContext<sai_eni_stat_t>>(context_name, instance, (sai_object_type_t)SAI_OBJECT_TYPE_ENI, m_vendorSai.get(), m_statsMode);
         context->always_check_supported_counters = true;
         return context;
     }
