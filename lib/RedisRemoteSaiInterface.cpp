@@ -569,6 +569,7 @@ sai_status_t RedisRemoteSaiInterface::notifyCounterGroupOperations(
 
     emplaceStrings(POLL_INTERVAL_FIELD, flexCounterGroupParam->poll_interval, entries);
     emplaceStrings(BULK_CHUNK_SIZE_FIELD, flexCounterGroupParam->bulk_chunk_size, entries);
+    emplaceStrings(BULK_CHUNK_SIZE_PER_PREFIX_FIELD, flexCounterGroupParam->bulk_chunk_size_per_prefix, entries);
     emplaceStrings(STATS_MODE_FIELD, flexCounterGroupParam->stats_mode, entries);
     emplaceStrings(flexCounterGroupParam->plugin_name, flexCounterGroupParam->plugins, entries);
     emplaceStrings(FLEX_COUNTER_STATUS_FIELD, flexCounterGroupParam->operation, entries);
