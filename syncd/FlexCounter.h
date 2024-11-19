@@ -27,8 +27,11 @@ namespace syncd
         void setNoDoubleCheckBulkCapability(
             _In_ bool);
 
-        void setBulkChunkSize(
+        virtual void setBulkChunkSize(
             _In_ uint32_t bulkChunkSize);
+
+        virtual void setBulkChunkSizePerPrefix(
+            _In_ const std::string& bulkChunkSizePerPrefix);
 
         bool hasPlugin() const {return !m_plugins.empty();}
 
@@ -56,6 +59,7 @@ namespace syncd
         std::string m_name;
         std::string m_instanceId;
         std::set<std::string> m_plugins;
+        std::string m_bulkChunkSizePerPrefix;
 
     public:
         bool always_check_supported_counters = false;
