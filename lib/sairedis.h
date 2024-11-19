@@ -147,6 +147,13 @@ typedef struct _sai_redis_flex_counter_group_parameter_t
      */
     sai_s8_list_t bulk_chunk_size;
 
+    /**
+     * @brief The bulk counter prefix map the counter group
+     *
+     * It should be a string representing bulk chunk size of each sub counter group.
+     */
+    sai_s8_list_t bulk_chunk_size_per_prefix;
+
 } sai_redis_flex_counter_group_parameter_t;
 
 typedef struct _sai_redis_flex_counter_parameter_t
