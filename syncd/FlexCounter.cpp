@@ -1309,9 +1309,10 @@ class DashMeterCounterContext : public BaseCounterContext
 public:
     DashMeterCounterContext(
             _In_ const std::string &name,
+            _In_ const std::string &instance,
             _In_ sairedis::SaiInterface *vendor_sai,
             _In_ std::string dbCounters):
-    BaseCounterContext(name), m_dbCounters(dbCounters), m_vendorSai(vendor_sai)
+    BaseCounterContext(name, instance), m_dbCounters(dbCounters), m_vendorSai(vendor_sai)
     {
         SWSS_LOG_ENTER();
     }
