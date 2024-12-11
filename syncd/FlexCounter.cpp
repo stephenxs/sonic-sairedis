@@ -553,8 +553,8 @@ public:
         else
         {
             std::map<std::string, vector<StatType>> counter_prefix_map;
-            std::vector<StatType> default_division;
-            mapCountersByPrefix(supportedIds, counter_prefix_map, default_division);
+            std::vector<StatType> default_partition;
+            mapCountersByPrefix(supportedIds, counter_prefix_map, default_partition);
 
             for (auto &counterPrefix : counter_prefix_map)
             {
@@ -563,9 +563,9 @@ public:
                 addBulkStatsContext(vid, rid, counterPrefix.second, *bulkContext.get());
             }
 
-            std::sort(default_division.begin(), default_division.end());
-            auto bulkContext = getBulkStatsContext(default_division, "default", default_bulk_chunk_size);
-            addBulkStatsContext(vid, rid, default_division, *bulkContext.get());
+            std::sort(default_partition.begin(), default_partition.end());
+            auto bulkContext = getBulkStatsContext(default_partition, "default", default_bulk_chunk_size);
+            addBulkStatsContext(vid, rid, default_partition, *bulkContext.get());
         }
     }
 
@@ -583,7 +583,7 @@ public:
             for (auto &token: tokens)
             {
                 auto counter_name_bulk_size = swss::tokenize(token, ':');
-                SWSS_LOG_INFO("New division %s bulk chunk size %s", counter_name_bulk_size[0].c_str(), counter_name_bulk_size[1].c_str());
+                SWSS_LOG_INFO("New partition %s bulk chunk size %s", counter_name_bulk_size[0].c_str(), counter_name_bulk_size[1].c_str());
                 m_counterChunkSizeMapFromPrefix[counter_name_bulk_size[0]] = stoi(counter_name_bulk_size[1]);
             }
         }
@@ -592,12 +592,12 @@ public:
     void mapCountersByPrefix(
         _In_ const std::vector<StatType>& supportedIds,
         _Out_ std::map<std::string, std::vector<StatType>> &counter_prefix_map,
-        _Out_ std::vector<StatType> &default_division,
+        _Out_ std::vector<StatType> &default_partition,
         _In_ bool log=false)
     {
         SWSS_LOG_ENTER();
 
-        default_division.clear();
+        default_partition.clear();
         for (auto &counter : supportedIds)
         {
             std::string counterStr = serializeStat(counter);
@@ -610,18 +610,18 @@ public:
                     counter_prefix_map[searchRef.first].push_back(counter);
                     if (log)
                     {
-                        SWSS_LOG_INFO("Put counter %s to division %s", counterStr.c_str(), searchRef.first.c_str());
+                        SWSS_LOG_INFO("Put counter %s to partition %s", counterStr.c_str(), searchRef.first.c_str());
                     }
                     break;
                 }
             }
             if (!found)
             {
-                default_division.push_back(counter);
+                default_partition.push_back(counter);
 
                 if (log)
                 {
-                    SWSS_LOG_INFO("Put counter %s to the default division", counterStr.c_str());
+                    SWSS_LOG_INFO("Put counter %s to the default partition", counterStr.c_str());
                 }
             }
         }
@@ -667,7 +667,7 @@ public:
             BulkContextType &singleBulkContext = *it->second.get();
             const std::vector<StatType> &allCounterIds = singleBulkContext.counter_ids;
             std::map<std::string, vector<StatType>> counterChunkSizePerPrefix;
-            std::vector<StatType> defaultDivision;
+            std::vector<StatType> defaultPartition;
 
             if (m_counterChunkSizeMapFromPrefix.empty())
             {
@@ -675,7 +675,7 @@ public:
             }
             else
             {
-                mapCountersByPrefix(allCounterIds, counterChunkSizePerPrefix, defaultDivision, true);
+                mapCountersByPrefix(allCounterIds, counterChunkSizePerPrefix, defaultPartition, true);
 
                 for (auto &counterPrefix : counterChunkSizePerPrefix)
                 {
@@ -688,18 +688,18 @@ public:
                     bulkContext.get()->object_keys = singleBulkContext.object_keys;
                     bulkContext.get()->counters.resize(bulkContext.get()->counter_ids.size() * bulkContext.get()->object_vids.size());
 
-                    SWSS_LOG_INFO("Re-initializing counter division %s", counterPrefix.first.c_str());
+                    SWSS_LOG_INFO("Re-initializing counter partition %s", counterPrefix.first.c_str());
                 }
 
-                std::sort(defaultDivision.begin(), defaultDivision.end());
-                auto defaultBulkContext = getBulkStatsContext(defaultDivision, "default", default_bulk_chunk_size);
-                defaultBulkContext.get()->counter_ids = move(defaultDivision);
+                std::sort(defaultPartition.begin(), defaultPartition.end());
+                auto defaultBulkContext = getBulkStatsContext(defaultPartition, "default", default_bulk_chunk_size);
+                defaultBulkContext.get()->counter_ids = move(defaultPartition);
                 defaultBulkContext.get()->object_statuses = move(singleBulkContext.object_statuses);
                 defaultBulkContext.get()->object_vids = move(singleBulkContext.object_vids);
                 defaultBulkContext.get()->object_keys = move(singleBulkContext.object_keys);
                 defaultBulkContext.get()->counters.resize(defaultBulkContext.get()->counter_ids.size() * defaultBulkContext.get()->object_vids.size());
                 m_bulkContexts.erase(it);
-                SWSS_LOG_INFO("Removed the previous default counter division");
+                SWSS_LOG_INFO("Removed the previous default counter partition");
             }
         }
         else
@@ -739,7 +739,7 @@ public:
 
         for (auto context : m_bulkContexts)
         {
-            SWSS_LOG_INFO("%s %s division %s number of OIDs %d number of counter IDs %d number of counters %d",
+            SWSS_LOG_INFO("%s %s partition %s number of OIDs %d number of counter IDs %d number of counters %d",
                           m_name.c_str(),
                           m_instanceId.c_str(),
                           context.second.get()->name.c_str(),
