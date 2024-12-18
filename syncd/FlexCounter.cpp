@@ -1078,7 +1078,15 @@ private:
                 ctx.counters.resize(ctx.counter_ids.size() * ctx.object_keys.size());
                 ctx.object_statuses.pop_back();
             }
-            break;
+            if (m_counterChunkSizeMapFromPrefix.empty())
+            {
+                break;
+            }
+            else
+            {
+                // There can be more than one bulk context containing the VID when the per counter ID bulk chunk size is configured
+                continue;
+            }
         }
 
         return found;
