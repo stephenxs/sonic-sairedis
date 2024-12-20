@@ -532,6 +532,169 @@ public:
         }
     }
 
+    virtual void bulkAddObject(
+            _In_ const std::vector<sai_object_id_t>& vids,
+                _In_ const std::vector<sai_object_id_t>& rids,
+                _In_ const std::vector<std::string>& idStrings,
+                _In_ const std::string &per_object_stats_mode)
+    {
+        SWSS_LOG_ENTER();
+        sai_stats_mode_t instance_stats_mode = SAI_STATS_MODE_READ_AND_CLEAR;
+        sai_stats_mode_t effective_stats_mode;
+        // TODO: use if const expression when c++17 is supported
+        if (HasStatsMode<CounterIdsType>::value)
+        {
+            if (per_object_stats_mode == STATS_MODE_READ_AND_CLEAR)
+            {
+                instance_stats_mode = SAI_STATS_MODE_READ_AND_CLEAR;
+            }
+            else if (per_object_stats_mode == STATS_MODE_READ)
+            {
+                instance_stats_mode = SAI_STATS_MODE_READ;
+            }
+            else
+            {
+                SWSS_LOG_WARN("Stats mode %s not supported for flex counter. Using STATS_MODE_READ_AND_CLEAR", per_object_stats_mode.c_str());
+            }
+
+            effective_stats_mode = (m_groupStatsMode == SAI_STATS_MODE_READ_AND_CLEAR ||
+                                    instance_stats_mode == SAI_STATS_MODE_READ_AND_CLEAR) ? SAI_STATS_MODE_READ_AND_CLEAR : SAI_STATS_MODE_READ;
+        }
+        else
+        {
+            effective_stats_mode = m_groupStatsMode;
+        }
+
+        std::vector<StatType> counter_ids;
+        for (const auto &str : idStrings)
+        {
+            StatType stat;
+            deserializeStat(str.c_str(), &stat);
+            counter_ids.push_back(stat);
+        }
+
+        updateSupportedCounters(rids[0]/*hacking. it is not really used*/, counter_ids, effective_stats_mode);
+        vector<sai_stat_capability_list_t> stats_capabilities(rids.size());
+
+        bool fallback = HasStatsMode<CounterIdsType>::value;
+        bool supportBulk = !fallback;
+
+        if (supportBulk)
+        {
+            BulkContextType ctx;
+            ctx.object_vids = vids;
+            transform(rids.begin(), rids.end(), back_inserter(ctx.object_keys), [](sai_object_id_t rid) {
+                sai_object_key_t key;
+                key.key.object_id = rid;
+                return key;
+            });
+            ctx.counter_ids = counter_ids;
+            ctx.object_statuses = vector<sai_status_t>(vids.size(), SAI_STATUS_SUCCESS);
+            ctx.counters.resize(counter_ids.size() * ctx.object_keys.size());
+            auto statsMode = m_groupStatsMode == SAI_STATS_MODE_READ ? SAI_STATS_MODE_BULK_READ : SAI_STATS_MODE_BULK_READ_AND_CLEAR;
+            auto status = m_vendorSai->bulkGetStats(
+                SAI_NULL_OBJECT_ID,
+                m_objectType,
+                static_cast<uint32_t>(ctx.object_keys.size()),
+                ctx.object_keys.data(),
+                static_cast<uint32_t>(ctx.counter_ids.size()),
+                reinterpret_cast<const sai_stat_id_t *>(ctx.counter_ids.data()),
+                statsMode,
+                ctx.object_statuses.data(),
+                ctx.counters.data());
+            fallback = (status != SAI_STATUS_SUCCESS);
+        }
+
+        if (fallback)
+        {
+            SWSS_LOG_NOTICE("All objects do not support bulk. Fallback to single call");
+
+            // Fall back to old way
+            for (size_t i = 0; i < vids.size(); i++)
+            {
+                auto rid = rids[i];
+                auto vid = vids[i];
+                addObject(vid, rid, idStrings, per_object_stats_mode);
+            }
+
+            return;
+        }
+
+        std::vector<StatType> supportedIds;
+        for (auto &counter : counter_ids)
+        {
+            if (isCounterSupported(counter))
+            {
+                supportedIds.push_back(counter);
+            }
+        }
+
+        if (!supportBulk)
+        {
+            for (size_t i = 0; i < vids.size(); i++)
+            {
+                auto &vid = vids[i];
+                auto &rid = rids[i];
+                // Perform a remove and re-add to simplify the logic here
+                removeObject(vid, false);
+
+                // Unlikely
+                auto counter_data = std::make_shared<CounterIds<StatType>>(rid, supportedIds);
+                // TODO: use if const expression when cpp17 is supported
+                if (HasStatsMode<CounterIdsType>::value)
+                {
+                    counter_data->setStatsMode(instance_stats_mode);
+                }
+                m_objectIdsMap.emplace(vid, counter_data);
+            }
+        }
+        else if (m_counterChunkSizeMapFromPrefix.empty())
+        {
+            std::sort(supportedIds.begin(), supportedIds.end());
+            auto bulkContext = getBulkStatsContext(supportedIds, "default", default_bulk_chunk_size);
+
+            for (size_t i = 0; i < vids.size(); i++)
+            {
+                auto &vid = vids[i];
+                auto &rid = rids[i];
+                // Perform a remove and re-add to simplify the logic here
+                removeObject(vid, false);
+
+                addBulkStatsContext(vid, rid, supportedIds, *bulkContext.get());
+            }
+        }      
+        else
+        {
+            std::map<std::string, vector<StatType>> counter_prefix_map;
+            std::vector<StatType> default_partition;
+            mapCountersByPrefix(supportedIds, counter_prefix_map, default_partition);
+
+            for (auto &counterPrefix : counter_prefix_map)
+            {
+                std::sort(counterPrefix.second.begin(), counterPrefix.second.end());
+            }
+
+            std::sort(default_partition.begin(), default_partition.end());
+
+            for (size_t i = 0; i < vids.size(); i++)
+            {
+                auto &vid = vids[i];
+                auto &rid = rids[i];
+                // Perform a remove and re-add to simplify the logic here
+                removeObject(vid, false);
+
+                for (auto &counterPrefix : counter_prefix_map)
+                {
+                    auto bulkContext = getBulkStatsContext(counterPrefix.second, counterPrefix.first, m_counterChunkSizeMapFromPrefix[counterPrefix.first]);
+                    addBulkStatsContext(vid, rid, counterPrefix.second, *bulkContext.get());
+                }
+
+                auto bulkContext = getBulkStatsContext(default_partition, "default", default_bulk_chunk_size);
+                addBulkStatsContext(vid, rid, supportedIds, *bulkContext.get());
+            }
+        }
+    }
+
     void removeObject(
             _In_ sai_object_id_t vid) override
     {
@@ -877,6 +1040,45 @@ private:
         }
     }
 
+    sai_status_t queryObjectSupportedCounters(
+            _In_ sai_object_id_t rid,
+            _Out_ sai_stat_capability_list_t &stats_capability)
+    {
+        SWSS_LOG_ENTER();
+        stats_capability.count = 0;
+        stats_capability.list = nullptr;
+
+        sai_object_key_t key;
+        key.key.object_id = rid;
+
+        /* First call is to check the size needed to allocate */
+        sai_status_t status = reinterpret_cast<class VendorSai*>(m_vendorSai)->queryObjectStatsCapability(
+            rid,
+            key,
+            m_objectType,
+            &stats_capability);
+
+        /* Second call is for query statistics capability */
+        if (status == SAI_STATUS_BUFFER_OVERFLOW)
+        {
+            std::vector<sai_stat_capability_t> statCapabilityList(stats_capability.count);
+            stats_capability.list = statCapabilityList.data();
+            status = reinterpret_cast<class VendorSai*>(m_vendorSai)->queryObjectStatsCapability(
+                rid,
+                key,
+                m_objectType,
+                &stats_capability);
+
+            if (status != SAI_STATUS_SUCCESS)
+            {
+                SWSS_LOG_INFO("Unable to get %s supported counters for %s",
+                    m_name.c_str(),
+                    sai_serialize_object_id(rid).c_str());
+            }
+        }
+        return status;
+    }
+
     sai_status_t querySupportedCounters(
             _In_ sai_object_id_t rid,
             _In_ sai_stats_mode_t stats_mode)
@@ -1173,6 +1375,15 @@ public:
                           m_plugins.end(),
                           [&] (auto &sha) { runRedisScript(counters_db, sha, idStrings, argv); });
         }
+    }
+
+    void bulkAddObject(
+            _In_ const std::vector<sai_object_id_t>& vids,
+            _In_ const std::vector<sai_object_id_t>& rids,
+            _In_ const std::vector<std::string>& idStrings,
+            _In_ const std::string &per_object_stats_mode) override
+    {
+        SWSS_LOG_ENTER();
     }
 
     bool hasObject() const override
@@ -2171,6 +2382,171 @@ void FlexCounter::addCounter(
         getCounterContext(COUNTER_TYPE_BUFFER_POOL)->addObject(
                 vid,
                 rid,
+                counterIds,
+                statsMode);
+    }
+
+    // notify thread to start polling
+    notifyPoll();
+}
+
+void FlexCounter::bulkAddCounter( 
+        _In_ sai_object_type_t objectType,
+        _In_ const std::vector<sai_object_id_t>& vids,
+        _In_ const std::vector<sai_object_id_t>& rids,
+        _In_ const std::vector<swss::FieldValueTuple>& values)
+{
+    MUTEX;
+
+    SWSS_LOG_ENTER();
+
+    std::vector<std::string> counterIds;
+
+    std::string statsMode;
+
+    for (const auto& valuePair: values)
+    {
+        const auto field = fvField(valuePair);
+        const auto value = fvValue(valuePair);
+
+        auto idStrings = swss::tokenize(value, ',');
+
+        if (objectType == SAI_OBJECT_TYPE_PORT && field == PORT_COUNTER_ID_LIST)
+        {
+            getCounterContext(COUNTER_TYPE_PORT)->bulkAddObject(
+                    vids,
+                    rids,
+                    idStrings,
+                    "");
+        }
+        else if (objectType == SAI_OBJECT_TYPE_PORT && field == PORT_DEBUG_COUNTER_ID_LIST)
+        {
+            getCounterContext(COUNTER_TYPE_PORT_DEBUG)->bulkAddObject(
+                    vids,
+                    rids,
+                    idStrings,
+                    "");
+        }
+        else if (objectType == SAI_OBJECT_TYPE_QUEUE && field == QUEUE_COUNTER_ID_LIST)
+        {
+            getCounterContext(COUNTER_TYPE_QUEUE)->bulkAddObject(
+                    vids,
+                    rids,
+                    idStrings,
+                    "");
+
+        }
+        else if (objectType == SAI_OBJECT_TYPE_QUEUE && field == QUEUE_ATTR_ID_LIST)
+        {
+            getCounterContext(ATTR_TYPE_QUEUE)->bulkAddObject(
+                    vids,
+                    rids,
+                    idStrings,
+                    "");
+        }
+        else if (objectType == SAI_OBJECT_TYPE_INGRESS_PRIORITY_GROUP && field == PG_COUNTER_ID_LIST)
+        {
+            getCounterContext(COUNTER_TYPE_PG)->bulkAddObject(
+                    vids,
+                    rids,
+                    idStrings,
+                    "");
+        }
+        else if (objectType == SAI_OBJECT_TYPE_INGRESS_PRIORITY_GROUP && field == PG_ATTR_ID_LIST)
+        {
+            getCounterContext(ATTR_TYPE_PG)->bulkAddObject(
+                    vids,
+                    rids,
+                    idStrings,
+                    "");
+        }
+        else if (objectType == SAI_OBJECT_TYPE_ROUTER_INTERFACE && field == RIF_COUNTER_ID_LIST)
+        {
+            getCounterContext(COUNTER_TYPE_RIF)->bulkAddObject(
+                    vids,
+                    rids,
+                    idStrings,
+                    "");
+        }
+        else if (objectType == SAI_OBJECT_TYPE_SWITCH && field == SWITCH_DEBUG_COUNTER_ID_LIST)
+        {
+            getCounterContext(COUNTER_TYPE_SWITCH_DEBUG)->bulkAddObject(
+                    vids,
+                    rids,
+                    idStrings,
+                    "");
+        }
+        else if (objectType == SAI_OBJECT_TYPE_MACSEC_FLOW && field == MACSEC_FLOW_COUNTER_ID_LIST)
+        {
+            getCounterContext(COUNTER_TYPE_MACSEC_FLOW)->bulkAddObject(
+                    vids,
+                    rids,
+                    idStrings,
+                    "");
+        }
+        else if (objectType == SAI_OBJECT_TYPE_MACSEC_SA && field == MACSEC_SA_COUNTER_ID_LIST)
+        {
+            getCounterContext(COUNTER_TYPE_MACSEC_SA)->bulkAddObject(
+                    vids,
+                    rids,
+                    idStrings,
+                    "");
+        }
+        else if (objectType == SAI_OBJECT_TYPE_MACSEC_SA && field == MACSEC_SA_ATTR_ID_LIST)
+        {
+            getCounterContext(ATTR_TYPE_MACSEC_SA)->bulkAddObject(
+                    vids,
+                    rids,
+                    idStrings,
+                    "");
+        }
+        else if (objectType == SAI_OBJECT_TYPE_ACL_COUNTER && field == ACL_COUNTER_ATTR_ID_LIST)
+        {
+            getCounterContext(ATTR_TYPE_ACL_COUNTER)->bulkAddObject(
+                    vids,
+                    rids,
+                    idStrings,
+                    "");
+        }
+        else if (objectType == SAI_OBJECT_TYPE_COUNTER && field == FLOW_COUNTER_ID_LIST)
+        {
+            getCounterContext(COUNTER_TYPE_FLOW)->bulkAddObject(
+                    vids,
+                    rids,
+                    idStrings,
+                    "");
+        }
+        else if (objectType == SAI_OBJECT_TYPE_BUFFER_POOL && field == BUFFER_POOL_COUNTER_ID_LIST)
+        {
+            counterIds = idStrings;
+        }
+        else if (objectType == SAI_OBJECT_TYPE_BUFFER_POOL && field == STATS_MODE_FIELD)
+        {
+            statsMode = value;
+        }
+        else if (objectType == SAI_OBJECT_TYPE_TUNNEL && field == TUNNEL_COUNTER_ID_LIST)
+        {
+            getCounterContext(COUNTER_TYPE_TUNNEL)->bulkAddObject(
+                    vids,
+                    rids,
+                    idStrings,
+                    "");
+        }
+        else
+        {
+            SWSS_LOG_ERROR("Object type and field combination is not supported, object type %s, field %s",
+                    sai_serialize_object_type(objectType).c_str(),
+                    field.c_str());
+        }
+    }
+
+    // outside loop since required 2 fields BUFFER_POOL_COUNTER_ID_LIST and STATS_MODE_FIELD
+
+    if (objectType == SAI_OBJECT_TYPE_BUFFER_POOL && counterIds.size())
+    {
+        getCounterContext(COUNTER_TYPE_BUFFER_POOL)->bulkAddObject(
+                vids,
+                rids,
                 counterIds,
                 statsMode);
     }
