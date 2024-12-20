@@ -86,6 +86,7 @@ void testAddRemoveCounter(
         VerifyStatsFunc verifyFunc,
         bool autoRemoveDbEntry,
         const std::string statsMode = STATS_MODE_READ,
+        bool bulkAdd = false,
         const std::string bulkChunkSize = "",
         const std::string bulkChunkSizePerCounter = "",
         bool bulkChunkSizeAfterPort = true,
@@ -122,9 +123,17 @@ void testAddRemoveCounter(
 
     values.clear();
     values.emplace_back(counterIdFieldName, join(counterIdNames));
-    for (auto object_id : object_ids)
+
+    if (bulkAdd)
     {
-        fc.addCounter(object_id, object_id, values);
+        fc.bulkAddCounter(SAI_OBJECT_TYPE_PORT, object_ids, object_ids, values);
+    }
+    else
+    {
+        for (auto object_id : object_ids)
+        {
+            fc.addCounter(object_id, object_id, values);
+        }
     }
 
     if (bulkChunkSizeAfterPort)
@@ -835,6 +844,7 @@ TEST(FlexCounter, bulkChunksize)
     std::vector<std::vector<sai_stat_id_t>> counterRecord;
     std::vector<std::vector<uint64_t>> valueRecord;
     sai_uint64_t counterSeed = 0;
+    uint32_t expectedInitObjectCount;
     sai->mock_bulkGetStats = [&](sai_object_id_t,
                                 sai_object_type_t,
                                 uint32_t object_count,
@@ -848,7 +858,7 @@ TEST(FlexCounter, bulkChunksize)
         EXPECT_TRUE(mode == SAI_STATS_MODE_BULK_READ);
         std::vector<sai_stat_id_t> record;
         std::vector<uint64_t> value;
-        if (number_of_counters >= 5 && object_count == 1)
+        if (number_of_counters >= 5 && object_count == expectedInitObjectCount)
         {
             allObjectIds.insert(toOid(object_keys[0].key.object_id));
             // This call is to check whether bulk counter polling is supported during initialization
@@ -915,6 +925,7 @@ TEST(FlexCounter, bulkChunksize)
         allObjectIds.erase(key);
     };
 
+    expectedInitObjectCount = 1;
     testAddRemoveCounter(
         6,
         SAI_OBJECT_TYPE_PORT,
@@ -924,6 +935,7 @@ TEST(FlexCounter, bulkChunksize)
         counterVerifyFunc,
         false,
         STATS_MODE_READ,
+        false,
         "3",
         "SAI_PORT_STAT_IF_OUT_QLEN:0;SAI_PORT_STAT_IF_IN_FEC:2");
     EXPECT_TRUE(allObjectIds.empty());
@@ -937,11 +949,43 @@ TEST(FlexCounter, bulkChunksize)
         counterVerifyFunc,
         false,
         STATS_MODE_READ,
+        false,
         "3",
         "SAI_PORT_STAT_IF_OUT_QLEN:0;SAI_PORT_STAT_IF_IN_FEC:2",
         false,
         PORT_PLUGIN_FIELD);
+        EXPECT_TRUE(allObjectIds.empty());
+
+    expectedInitObjectCount = 6;
+    testAddRemoveCounter(
+        6,
+        SAI_OBJECT_TYPE_PORT,
+        PORT_COUNTER_ID_LIST,
+        {"SAI_PORT_STAT_IF_IN_OCTETS", "SAI_PORT_STAT_IF_IN_UCAST_PKTS", "SAI_PORT_STAT_IF_OUT_QLEN", "SAI_PORT_STAT_IF_IN_FEC_CORRECTABLE_FRAMES", "SAI_PORT_STAT_IF_IN_FEC_NOT_CORRECTABLE_FRAMES"},
+        {},
+        counterVerifyFunc,
+        false,
+        STATS_MODE_READ,
+        true,
+        "3",
+        "SAI_PORT_STAT_IF_OUT_QLEN:0;SAI_PORT_STAT_IF_IN_FEC:2");
     EXPECT_TRUE(allObjectIds.empty());
+
+    testAddRemoveCounter(
+        6,
+        SAI_OBJECT_TYPE_PORT,
+        PORT_COUNTER_ID_LIST,
+        {"SAI_PORT_STAT_IF_IN_OCTETS", "SAI_PORT_STAT_IF_IN_UCAST_PKTS", "SAI_PORT_STAT_IF_OUT_QLEN", "SAI_PORT_STAT_IF_IN_FEC_CORRECTABLE_FRAMES", "SAI_PORT_STAT_IF_IN_FEC_NOT_CORRECTABLE_FRAMES"},
+        {},
+        counterVerifyFunc,
+        false,
+        STATS_MODE_READ,
+        true,
+        "3",
+        "SAI_PORT_STAT_IF_OUT_QLEN:0;SAI_PORT_STAT_IF_IN_FEC:2",
+        false,
+        PORT_PLUGIN_FIELD);
+        EXPECT_TRUE(allObjectIds.empty());
 }
 
 TEST(FlexCounter, counterIdChange)
