@@ -569,24 +569,35 @@ public:
         }
     }
 
-    void parseCounterPrefixConfigString(
+    bool parseCounterPrefixConfigString(
         _In_ const std::string& prefixConfigString)
     {
         SWSS_LOG_ENTER();
 
         m_counterChunkSizeMapFromPrefix.clear();
 
-        if (!prefixConfigString.empty())
+        if (!prefixConfigString.empty() && prefixConfigString != "NULL")
         {
             auto tokens = swss::tokenize(prefixConfigString, ';');
 
             for (auto &token: tokens)
             {
                 auto counter_name_bulk_size = swss::tokenize(token, ':');
-                SWSS_LOG_INFO("New partition %s bulk chunk size %s", counter_name_bulk_size[0].c_str(), counter_name_bulk_size[1].c_str());
-                m_counterChunkSizeMapFromPrefix[counter_name_bulk_size[0]] = stoi(counter_name_bulk_size[1]);
+                if (counter_name_bulk_size.size() == 2)
+                {
+                    SWSS_LOG_INFO("New partition %s bulk chunk size %s", counter_name_bulk_size[0].c_str(), counter_name_bulk_size[1].c_str());
+                    m_counterChunkSizeMapFromPrefix[counter_name_bulk_size[0]] = stoi(counter_name_bulk_size[1]);
+                }
+                else
+                {
+                    SWSS_LOG_ERROR("Invalid bulk chunk size per counter ID field %s", prefixConfigString.c_str());
+                    m_counterChunkSizeMapFromPrefix.clear();
+                    return false;
+                }
             }
         }
+
+        return true;
     }
 
     void mapCountersByPrefix(
@@ -632,7 +643,7 @@ public:
     {
         SWSS_LOG_ENTER();
         default_bulk_chunk_size = bulkChunkSize;
-        SWSS_LOG_INFO("Bulk chunk size updatd to %u", bulkChunkSize);
+        SWSS_LOG_INFO("Bulk chunk size updated to %u", bulkChunkSize);
 
         for (auto &bulkStatsContext : m_bulkContexts)
         {
@@ -653,8 +664,7 @@ public:
 
         m_bulkChunkSizePerPrefix = bulkChunkSizePerPrefix;
 
-        parseCounterPrefixConfigString(bulkChunkSizePerPrefix);
-        if (m_bulkContexts.empty())
+        if (!parseCounterPrefixConfigString(bulkChunkSizePerPrefix) || m_bulkContexts.empty())
         {
             return;
         }
@@ -2058,20 +2068,30 @@ void FlexCounter::addCounterPlugin(
         }
         else if (field == BULK_CHUNK_SIZE_FIELD)
         {
-            bulkChunkSize = stoi(value);
+            if (value != "NULL")
+            {
+                try
+                {
+                    bulkChunkSize = stoi(value);
+                }
+                catch (...)
+                {
+                    SWSS_LOG_ERROR("Invalid bulk chunk size %s", value.c_str());
+                }
+            }
             for (auto &context : m_counterContext)
             {
-                context.second->setBulkChunkSize(bulkChunkSize);
                 SWSS_LOG_NOTICE("Set counter context %s %s bulk size %u", m_instanceId.c_str(), COUNTER_TYPE_PORT.c_str(), bulkChunkSize);
+                context.second->setBulkChunkSize(bulkChunkSize);
             }
         }
         else if (field == BULK_CHUNK_SIZE_PER_PREFIX_FIELD)
         {
-            bulkChunkSizePerPrefix = value;
+            bulkChunkSizePerPrefix = value == "NULL" ? "NULL" : value;
             for (auto &context : m_counterContext)
             {
-                context.second->setBulkChunkSizePerPrefix(bulkChunkSizePerPrefix);
                 SWSS_LOG_NOTICE("Set counter context %s %s bulk chunk prefix map %s", m_instanceId.c_str(), COUNTER_TYPE_PORT.c_str(), bulkChunkSizePerPrefix.c_str());
+                context.second->setBulkChunkSizePerPrefix(bulkChunkSizePerPrefix);
             }
         }
         else if (field == FLEX_COUNTER_STATUS_FIELD)
