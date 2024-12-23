@@ -89,7 +89,8 @@ void testAddRemoveCounter(
         const std::string bulkChunkSize = "",
         const std::string bulkChunkSizePerCounter = "",
         bool bulkChunkSizeAfterPort = true,
-        const std::string pluginName = "")
+        const std::string pluginName = "",
+        bool immediatelyRemoveBulkChunkSizePerCounter = false)
 {
     SWSS_LOG_ENTER();
 
@@ -130,6 +131,12 @@ void testAddRemoveCounter(
     if (bulkChunkSizeAfterPort)
     {
         fc.addCounterPlugin(bulkChunkSizeValues);
+        if (immediatelyRemoveBulkChunkSizePerCounter)
+        {
+            bulkChunkSizeValues.clear();
+            bulkChunkSizeValues.emplace_back(BULK_CHUNK_SIZE_PER_PREFIX_FIELD, "");
+            fc.addCounterPlugin(bulkChunkSizeValues);
+        }
     }
 
     EXPECT_EQ(fc.isEmpty(), false);
@@ -835,6 +842,7 @@ TEST(FlexCounter, bulkChunksize)
     std::vector<std::vector<sai_stat_id_t>> counterRecord;
     std::vector<std::vector<uint64_t>> valueRecord;
     sai_uint64_t counterSeed = 0;
+    uint32_t unifiedBulkChunkSize = 0;
     sai->mock_bulkGetStats = [&](sai_object_id_t,
                                 sai_object_type_t,
                                 uint32_t object_count,
@@ -868,6 +876,14 @@ TEST(FlexCounter, bulkChunksize)
                 counters[i * number_of_counters + j] = counterMap[counter_ids[j]];
                 record.emplace_back(counter_ids[j]);
                 value.emplace_back(counterSeed);
+                if (unifiedBulkChunkSize > 0)
+                {
+                    if (object_count != unifiedBulkChunkSize)
+                    {
+                    EXPECT_EQ(object_count, unifiedBulkChunkSize);
+                    }
+                    continue;
+                }
                 switch (counter_ids[j])
                 {
                 case SAI_PORT_STAT_IF_IN_OCTETS:
@@ -941,6 +957,23 @@ TEST(FlexCounter, bulkChunksize)
         "SAI_PORT_STAT_IF_OUT_QLEN:0;SAI_PORT_STAT_IF_IN_FEC:2",
         false,
         PORT_PLUGIN_FIELD);
+    EXPECT_TRUE(allObjectIds.empty());
+
+    unifiedBulkChunkSize = 3;
+    testAddRemoveCounter(
+        6,
+        SAI_OBJECT_TYPE_PORT,
+        PORT_COUNTER_ID_LIST,
+        {"SAI_PORT_STAT_IF_IN_OCTETS", "SAI_PORT_STAT_IF_IN_UCAST_PKTS", "SAI_PORT_STAT_IF_OUT_QLEN", "SAI_PORT_STAT_IF_IN_FEC_CORRECTABLE_FRAMES", "SAI_PORT_STAT_IF_IN_FEC_NOT_CORRECTABLE_FRAMES"},
+        {},
+        counterVerifyFunc,
+        false,
+        STATS_MODE_READ,
+        "3",
+        "SAI_PORT_STAT_IF_OUT_QLEN:0;SAI_PORT_STAT_IF_IN_FEC:2",
+        true,
+        "",
+        true);
     EXPECT_TRUE(allObjectIds.empty());
 }
 
@@ -1335,4 +1368,3 @@ TEST(FlexCounter, noEniDashMeterCounter)
         counterVerifyFunc,
         false);
 }
-
