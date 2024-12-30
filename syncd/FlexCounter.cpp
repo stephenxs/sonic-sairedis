@@ -664,6 +664,7 @@ public:
 
         m_bulkChunkSizePerPrefix = bulkChunkSizePerPrefix;
 
+        // No operation if the input string is invalid or no bulk context has been created
         if (!parseCounterPrefixConfigString(bulkChunkSizePerPrefix) || m_bulkContexts.empty())
         {
             return;
@@ -671,7 +672,8 @@ public:
 
         if (m_bulkContexts.size() == 1)
         {
-            // hasn't split
+            // Only one bulk context exists which means
+            // it is the first time per counter chunk size is configured and a unified counter ID set is polled for all objects
             SWSS_LOG_NOTICE("Split counter IDs set by prefix for the first time %s", bulkChunkSizePerPrefix.c_str());
             auto it = m_bulkContexts.begin();
             std::shared_ptr<BulkContextType> singleBulkContext = it->second;
