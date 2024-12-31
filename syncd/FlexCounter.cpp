@@ -578,22 +578,22 @@ public:
 
         if (!prefixConfigString.empty() && prefixConfigString != "NULL")
         {
-            auto tokens = swss::tokenize(prefixConfigString, ';');
-
-            for (auto &token: tokens)
+            try
             {
-                auto counter_name_bulk_size = swss::tokenize(token, ':');
-                if (counter_name_bulk_size.size() == 2)
+                auto tokens = swss::tokenize(prefixConfigString, ';');
+
+                for (auto &token: tokens)
                 {
+                    auto counter_name_bulk_size = swss::tokenize(token, ':');
                     SWSS_LOG_INFO("New partition %s bulk chunk size %s", counter_name_bulk_size[0].c_str(), counter_name_bulk_size[1].c_str());
                     m_counterChunkSizeMapFromPrefix[counter_name_bulk_size[0]] = stoi(counter_name_bulk_size[1]);
                 }
-                else
-                {
-                    SWSS_LOG_ERROR("Invalid bulk chunk size per counter ID field %s", prefixConfigString.c_str());
-                    m_counterChunkSizeMapFromPrefix.clear();
-                    return false;
-                }
+            }
+            catch (...)
+            {
+                SWSS_LOG_ERROR("Invalid bulk chunk size per counter ID field %s", prefixConfigString.c_str());
+                m_counterChunkSizeMapFromPrefix.clear();
+                return false;
             }
         }
 
@@ -2045,7 +2045,7 @@ void FlexCounter::addCounterPlugin(
         }
         else if (field == BULK_CHUNK_SIZE_PER_PREFIX_FIELD)
         {
-            bulkChunkSizePerPrefix = value == "NULL" ? "NULL" : value;
+            bulkChunkSizePerPrefix = value;
             for (auto &context : m_counterContext)
             {
                 SWSS_LOG_NOTICE("Set counter context %s %s bulk chunk prefix map %s", m_instanceId.c_str(), COUNTER_TYPE_PORT.c_str(), bulkChunkSizePerPrefix.c_str());
