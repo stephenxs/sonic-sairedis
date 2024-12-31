@@ -554,7 +554,7 @@ public:
         {
             std::map<std::string, vector<StatType>> counter_prefix_map;
             std::vector<StatType> default_partition;
-            mapCountersByPrefix(supportedIds, counter_prefix_map, default_partition);
+            createCounterBulkChunkSizePerPrefixPartition(supportedIds, counter_prefix_map, default_partition);
 
             for (auto &counterPrefix : counter_prefix_map)
             {
@@ -569,7 +569,7 @@ public:
         }
     }
 
-    bool parseCounterPrefixConfigString(
+    bool parseBulkChunkSizePerPrefixConfigString(
         _In_ const std::string& prefixConfigString)
     {
         SWSS_LOG_ENTER();
@@ -600,7 +600,7 @@ public:
         return true;
     }
 
-    void mapCountersByPrefix(
+    void createCounterBulkChunkSizePerPrefixPartition(
         _In_ const std::vector<StatType>& supportedIds,
         _Out_ std::map<std::string, std::vector<StatType>> &counter_prefix_map,
         _Out_ std::vector<StatType> &default_partition,
@@ -665,7 +665,7 @@ public:
         m_bulkChunkSizePerPrefix = bulkChunkSizePerPrefix;
 
         // No operation if the input string is invalid or no bulk context has been created
-        if (!parseCounterPrefixConfigString(bulkChunkSizePerPrefix) || m_bulkContexts.empty())
+        if (!parseBulkChunkSizePerPrefixConfigString(bulkChunkSizePerPrefix) || m_bulkContexts.empty())
         {
             return;
         }
@@ -682,12 +682,14 @@ public:
 
             if (m_counterChunkSizeMapFromPrefix.empty())
             {
+                // There is still no per counter prefix chunk size configured as the chunk size map is still empty.
                 singleBulkContext.get()->default_bulk_chunk_size = default_bulk_chunk_size;
             }
             else
             {
+                // Split the counter IDs according to the counter ID prefix mapping and store them into m_bulkContexts
                 SWSS_LOG_NOTICE("Split counter IDs set by prefix for the first time %s", bulkChunkSizePerPrefix.c_str());
-                mapCountersByPrefix(allCounterIds, counterChunkSizePerPrefix, defaultPartition, true);
+                createCounterBulkChunkSizePerPrefixPartition(allCounterIds, counterChunkSizePerPrefix, defaultPartition, true);
 
                 for (auto &counterPrefix : counterChunkSizePerPrefix)
                 {
@@ -712,6 +714,11 @@ public:
         }
         else if (m_counterChunkSizeMapFromPrefix.empty())
         {
+            // There have been multiple bulk contexts which can result from
+            // 1. per counter prefix chunk size configuration
+            // 2. different objects support different counter ID set
+            // And there is no per counter prefix chunk size configured any more
+            // Multiple bulk contexts will be merged into one if they share the same object IDs set, which means case (1).
             std::set<sai_object_id_t> oid_set;
             std::vector<StatType> counter_ids;
             std::shared_ptr<BulkContextType> defaultBulkContext;
@@ -745,6 +752,8 @@ public:
         }
         else
         {
+            // Multiple bulk contexts and per counter prefix chunk size
+            // Update the chunk size only in this case.
             SWSS_LOG_NOTICE("Update bulk chunk size only %s", bulkChunkSizePerPrefix.c_str());
 
             auto counterChunkSizeMapFromPrefix = m_counterChunkSizeMapFromPrefix;
@@ -926,7 +935,7 @@ public:
             {
                 std::map<std::string, vector<StatType>> counter_prefix_map;
                 std::vector<StatType> default_partition;
-                mapCountersByPrefix(supportedIds, counter_prefix_map, default_partition);
+                createCounterBulkChunkSizePerPrefixPartition(supportedIds, counter_prefix_map, default_partition);
 
                 for (auto &counterPrefix : counter_prefix_map)
                 {
@@ -1026,7 +1035,7 @@ public:
             return;
         }
 
-        SWSS_LOG_INFO("Before running plugin %s %s", m_instanceId.c_str(), m_name.c_str());
+        SWSS_LOG_DEBUG("Before running plugin %s %s", m_instanceId.c_str(), m_name.c_str());
 
         std::vector<std::string> idStrings;
         idStrings.reserve(m_objectIdsMap.size());
@@ -1047,7 +1056,7 @@ public:
                       m_plugins.end(),
                       [&] (auto &sha) { runRedisScript(counters_db, sha, idStrings, argv); });
 
-        SWSS_LOG_INFO("After running plugin %s %s", m_instanceId.c_str(), m_name.c_str());
+        SWSS_LOG_DEBUG("After running plugin %s %s", m_instanceId.c_str(), m_name.c_str());
     }
 
     bool hasObject() const override
@@ -1158,7 +1167,7 @@ private:
         }
         uint32_t current = 0;
 
-        SWSS_LOG_INFO("Before getting bulk %s %s %s size %u bulk chunk size %u current %u", m_instanceId.c_str(), m_name.c_str(), ctx.name.c_str(), size, bulk_chunk_size, current);
+        SWSS_LOG_DEBUG("Before getting bulk %s %s %s size %u bulk chunk size %u current %u", m_instanceId.c_str(), m_name.c_str(), ctx.name.c_str(), size, bulk_chunk_size, current);
 
         while (current < size)
         {
@@ -1178,7 +1187,7 @@ private:
             }
             current += bulk_chunk_size;
 
-            SWSS_LOG_INFO("After getting bulk %s %s %s index %u(advanced to %u) bulk chunk size %u", m_instanceId.c_str(), m_name.c_str(), ctx.name.c_str(), current - bulk_chunk_size, current, bulk_chunk_size);
+            SWSS_LOG_DEBUG("After getting bulk %s %s %s index %u(advanced to %u) bulk chunk size %u", m_instanceId.c_str(), m_name.c_str(), ctx.name.c_str(), current - bulk_chunk_size, current, bulk_chunk_size);
 
             if (size - current < bulk_chunk_size)
             {
@@ -1207,7 +1216,7 @@ private:
             values.clear();
         }
 
-        SWSS_LOG_INFO("After pushing db %s %s %s", m_instanceId.c_str(), m_name.c_str(), ctx.name.c_str());
+        SWSS_LOG_DEBUG("After pushing db %s %s %s", m_instanceId.c_str(), m_name.c_str(), ctx.name.c_str());
     }
 
     auto getBulkStatsContext(
