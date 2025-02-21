@@ -480,7 +480,7 @@ class CounterContext : public BaseCounterContext
     std::map<std::string, uint32_t> m_counterChunkSizeMapFromPrefix;
 
 protected:
-    sai_object_id_t m_switchId;
+    sai_object_id_t m_switchId = SAI_NULL_OBJECT_ID;
 
 public:
     typedef CounterIds<StatType> CounterIdsType;
@@ -1445,7 +1445,7 @@ private:
         stats_capability.count = 0;
         stats_capability.list = nullptr;
 
-        if (m_switchId == 0UL)
+        if (m_switchId == SAI_NULL_OBJECT_ID)
         {
             m_switchId = m_vendorSai->switchIdQuery(rid);
         }
