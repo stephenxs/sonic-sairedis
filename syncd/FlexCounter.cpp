@@ -914,6 +914,12 @@ public:
             }
         }
 
+        if (supportedIds.empty())
+        {
+            SWSS_LOG_NOTICE("%s %s does not have supported counters", m_name.c_str(), m_instanceId.c_str());
+            return;
+        }
+
         std::map<std::vector<StatType>, std::tuple<const std::string, uint32_t>> bulkUnsupportedCounters;
         auto statsMode = m_groupStatsMode == SAI_STATS_MODE_READ ? SAI_STATS_MODE_BULK_READ : SAI_STATS_MODE_BULK_READ_AND_CLEAR;
         auto checkAndUpdateBulkCapability = [&](const std::vector<StatType> &counter_ids, const std::string &prefix, uint32_t bulk_chunk_size)
