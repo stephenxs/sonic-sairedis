@@ -126,8 +126,7 @@ TEST_F(SwitchStateBaseTest, switchHashCapabilitiesGet)
         SAI_NATIVE_HASH_FIELD_INNER_DST_IP,
         SAI_NATIVE_HASH_FIELD_INNER_SRC_IP,
         SAI_NATIVE_HASH_FIELD_INNER_L4_DST_PORT,
-        SAI_NATIVE_HASH_FIELD_INNER_L4_SRC_PORT,
-        SAI_NATIVE_HASH_FIELD_IPV6_FLOW_LABEL
+        SAI_NATIVE_HASH_FIELD_INNER_L4_SRC_PORT
     };
 
     std::set<sai_native_hash_field_t> hfSet2;
