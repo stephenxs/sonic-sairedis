@@ -1150,6 +1150,30 @@ void SaiPlayer::performSleep(
     }
 }
 
+void SaiPlayer::performInterrupt(
+        _In_ const std::string& line)
+{
+    SWSS_LOG_ENTER();
+
+    // timestamp|action|optional_message
+    auto v = swss::tokenize(line, '|');
+
+    if (v.size() >= 3 && !v[2].empty())
+    {
+        // Display optional message if available
+        printf("\n*** INTERRUPT: %s ***\n", v[2].c_str());
+    }
+    else
+    {
+        printf("\n*** INTERRUPT: Replay paused. Press Enter to continue ***\n");
+    }
+
+    // Wait for user to press Enter
+    getchar();
+
+    SWSS_LOG_NOTICE("Continuing replay after interrupt");
+}
+
 void SaiPlayer::performNotifySyncd(
         _In_ const std::string& request,
         _In_ const std::string& response)
@@ -1489,15 +1513,14 @@ sai_status_t SaiPlayer::handle_bulk_generic(
         sai_object_id_t localSwitchId = m_sai->switchIdQuery(objectIds[0]);
         sai_object_id_t switchId = translate_local_to_redis(localSwitchId);
 
-        sai_status_t status = m_sai->bulkCreate(
-                objectType,
-                switchId,
-                (uint32_t)oids.size(),
-                attr_count.data(),
-                attr_list.data(),
-                SAI_BULK_OP_ERROR_MODE_IGNORE_ERROR, // TODO we need to get that from recording
-                oids.data(),
-                statuses.data());
+        sai_status_t status = m_sai->bulkCreate(objectType,
+                                            switchId,
+                                            (uint32_t)oids.size(),
+                                            attr_count.data(),
+                                            attr_list.data(),
+                                            SAI_BULK_OP_ERROR_MODE_IGNORE_ERROR, // TODO we need to get that from recording
+                                            oids.data(),
+                                            statuses.data());
 
         for (size_t i = 0; i < statuses.size(); ++i)
         {
@@ -2689,6 +2712,9 @@ int SaiPlayer::replay()
 
             case '@':
                 performSleep(line);
+                continue;
+            case 'i':
+                performInterrupt(line);
                 continue;
             case 'c':
                 api = SAI_COMMON_API_CREATE;

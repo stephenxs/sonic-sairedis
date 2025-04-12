@@ -82,6 +82,9 @@ namespace saiplayer
             void performSleep(
                     _In_ const std::string& line);
 
+            void performInterrupt(
+                    _In_ const std::string& line);
+
             void handle_get_response(
                     _In_ sai_object_type_t object_type,
                     _In_ uint32_t get_attr_count,
