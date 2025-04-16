@@ -2750,6 +2750,14 @@ void FlexCounter::addCounter(
                     idStrings,
                     "");
         }
+        else if (objectType == SAI_OBJECT_TYPE_POLICER && field == POLICER_COUNTER_ID_LIST)
+        {
+            getCounterContext(COUNTER_TYPE_POLICER)->addObject(
+                    vid,
+                    rid,
+                    idStrings,
+                    "");
+        }
         else if (objectType == SAI_OBJECT_TYPE_BUFFER_POOL && field == BUFFER_POOL_COUNTER_ID_LIST)
         {
             counterIds = idStrings;

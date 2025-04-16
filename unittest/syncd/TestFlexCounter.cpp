@@ -157,6 +157,17 @@ void testAddRemoveCounter(
         }
     }
 
+    if (bulkChunkSizeAfterPort)
+    {
+        fc.addCounterPlugin(bulkChunkSizeValues);
+        if (immediatelyRemoveBulkChunkSizePerCounter)
+        {
+            bulkChunkSizeValues.clear();
+            bulkChunkSizeValues.emplace_back(BULK_CHUNK_SIZE_PER_PREFIX_FIELD, "");
+            fc.addCounterPlugin(bulkChunkSizeValues);
+        }
+    }
+
     EXPECT_EQ(fc.isEmpty(), false);
 
     usleep(1000*1050);
