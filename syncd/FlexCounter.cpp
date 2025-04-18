@@ -2411,10 +2411,6 @@ std::shared_ptr<BaseCounterContext> FlexCounter::createCounterContext(
     {
         return std::make_shared<CounterContext<sai_policer_stat_t>>(context_name, instance, SAI_OBJECT_TYPE_POLICER, m_vendorSai.get(), m_statsMode);
     }
-    else if (context_name == COUNTER_TYPE_POLICER)
-    {
-        return std::make_shared<CounterContext<sai_policer_stat_t>>(context_name, SAI_OBJECT_TYPE_POLICER, m_vendorSai.get(), m_statsMode);
-    }
 
     SWSS_LOG_THROW("Invalid counter type %s", context_name.c_str());
     // GCC 8.3 requires a return value here
@@ -2749,14 +2745,6 @@ void FlexCounter::addCounter(
         if (counterGroupRef != m_objectTypeField2CounterType.end())
         {
             getCounterContext(counterGroupRef->second)->addObject(
-                    vid,
-                    rid,
-                    idStrings,
-                    "");
-        }
-        else if (objectType == SAI_OBJECT_TYPE_POLICER && field == POLICER_COUNTER_ID_LIST)
-        {
-            getCounterContext(COUNTER_TYPE_POLICER)->addObject(
                     vid,
                     rid,
                     idStrings,
