@@ -320,6 +320,11 @@ namespace saimeta
             static bool is_ipv6_mask_valid(
                     _In_ const uint8_t* mask);
 
+            static bool isPortObjectIdValid(
+                    _In_ sai_object_type_t object_type);
+
+            static std::vector<std::string> getValidPortObjectTypes();
+
         private: // unit tests helpers
 
             bool meta_unittests_get_and_erase_set_readonly_flag(
@@ -544,8 +549,23 @@ namespace saimeta
                     _In_ bool create,
                     _In_ bool get = false);
 
+             sai_status_t meta_sai_validate_outbound_port_map_port_range_entry(
+                        _In_ const sai_outbound_port_map_port_range_entry_t* outbound_port_map_entry,
+                        _In_ bool create,
+                        _In_ bool get = false);
+
              sai_status_t meta_sai_validate_outbound_routing_entry(
                     _In_ const sai_outbound_routing_entry_t* outbound_routing_entry,
+                    _In_ bool create,
+                    _In_ bool get = false);
+
+             sai_status_t meta_sai_validate_global_trusted_vni_entry(
+                    _In_ const sai_global_trusted_vni_entry_t* global_trusted_vni_entry,
+                    _In_ bool create,
+                    _In_ bool get = false);
+
+             sai_status_t meta_sai_validate_eni_trusted_vni_entry(
+                    _In_ const sai_eni_trusted_vni_entry_t* eni_trusted_vni_entry,
                     _In_ bool create,
                     _In_ bool get = false);
 
@@ -561,6 +581,11 @@ namespace saimeta
 
              sai_status_t meta_sai_validate_meter_bucket_entry(
                      _In_ const sai_meter_bucket_entry_t* meter_bucket_entry,
+                     _In_ bool create,
+                     _In_ bool get = false);
+
+             sai_status_t meta_sai_validate_prefix_compression_entry(
+                     _In_ const sai_prefix_compression_entry_t* prefix_compression_entry,
                      _In_ bool create,
                      _In_ bool get = false);
 

@@ -8,6 +8,8 @@
 
 #include <inttypes.h>
 
+#include <boost/algorithm/string/join.hpp>
+
 #include <set>
 
 // TODO add validation for all oids belong to the same switch
@@ -3093,6 +3095,25 @@ sai_status_t Meta::meta_sai_validate_pa_validation_entry(
     return SAI_STATUS_SUCCESS;
 }
 
+sai_status_t Meta::meta_sai_validate_outbound_port_map_port_range_entry(
+    _In_ const sai_outbound_port_map_port_range_entry_t* outbound_port_map_entry,
+    _In_ bool create,
+    _In_ bool get)
+{
+    SWSS_LOG_ENTER();
+
+    if (outbound_port_map_entry == NULL)
+    {
+        SWSS_LOG_ERROR("outbound_port_map_entry pointer is NULL");
+
+        return SAI_STATUS_INVALID_PARAMETER;
+    }
+
+    // TODO FIX ME
+
+    return SAI_STATUS_NOT_IMPLEMENTED;
+}
+
 sai_status_t Meta::meta_sai_validate_outbound_routing_entry(
         _In_ const sai_outbound_routing_entry_t* outbound_routing_entry,
         _In_ bool create,
@@ -3137,6 +3158,44 @@ sai_status_t Meta::meta_sai_validate_outbound_routing_entry(
     }
 
     return SAI_STATUS_SUCCESS;
+}
+
+sai_status_t Meta::meta_sai_validate_global_trusted_vni_entry(
+    _In_ const sai_global_trusted_vni_entry_t* global_trusted_vni_entry,
+    _In_ bool create,
+    _In_ bool get)
+{
+    SWSS_LOG_ENTER();
+
+    if (global_trusted_vni_entry == NULL)
+    {
+        SWSS_LOG_ERROR("global_trusted_vni_entry pointer is NULL");
+
+        return SAI_STATUS_INVALID_PARAMETER;
+    }
+
+    // TODO FIX ME
+
+    return SAI_STATUS_NOT_IMPLEMENTED;
+}
+
+sai_status_t Meta::meta_sai_validate_eni_trusted_vni_entry(
+    _In_ const sai_eni_trusted_vni_entry_t* eni_trusted_vni_entry,
+    _In_ bool create,
+    _In_ bool get)
+{
+    SWSS_LOG_ENTER();
+
+    if (eni_trusted_vni_entry == NULL)
+    {
+        SWSS_LOG_ERROR("eni_trusted_vni_entry pointer is NULL");
+
+        return SAI_STATUS_INVALID_PARAMETER;
+    }
+
+    // TODO FIX ME
+
+    return SAI_STATUS_NOT_IMPLEMENTED;
 }
 
 sai_status_t Meta::meta_sai_validate_outbound_ca_to_pa_entry(
@@ -3214,6 +3273,25 @@ sai_status_t Meta::meta_sai_validate_meter_bucket_entry(
     if (meter_bucket_entry == NULL)
     {
         SWSS_LOG_ERROR("meter_bucket_entry pointer is NULL");
+
+        return SAI_STATUS_INVALID_PARAMETER;
+    }
+
+    // TODO FIX ME
+
+    return SAI_STATUS_NOT_IMPLEMENTED;
+}
+
+sai_status_t Meta::meta_sai_validate_prefix_compression_entry(
+        _In_ const sai_prefix_compression_entry_t* prefix_compression_entry,
+        _In_ bool create,
+        _In_ bool get)
+{
+    SWSS_LOG_ENTER();
+
+    if (prefix_compression_entry == NULL)
+    {
+        SWSS_LOG_ERROR("prefix_compression_entry pointer is NULL");
 
         return SAI_STATUS_INVALID_PARAMETER;
     }
@@ -6744,24 +6822,14 @@ void Meta::meta_sai_on_port_state_change_single(
 
     auto ot = objectTypeQuery(data.port_id);
 
-    bool valid = false;
+    bool valid = isPortObjectIdValid(ot);
 
-    switch (ot)
+    if (!valid)
     {
-        // TODO hardcoded types, must advance SAI repository commit to get metadata for this
-        case SAI_OBJECT_TYPE_PORT:
-        case SAI_OBJECT_TYPE_BRIDGE_PORT:
-        case SAI_OBJECT_TYPE_LAG:
-
-            valid = true;
-            break;
-
-        default:
-
-            SWSS_LOG_ERROR("data.port_id %s has unexpected type: %s, expected PORT, BRIDGE_PORT or LAG",
-                    sai_serialize_object_id(data.port_id).c_str(),
-                    sai_serialize_object_type(ot).c_str());
-            break;
+        SWSS_LOG_ERROR("data.port_id %s has unexpected type: %s, expected: %s",
+                sai_serialize_object_id(data.port_id).c_str(),
+                sai_serialize_object_type(ot).c_str(),
+                boost::algorithm::join(getValidPortObjectTypes(), ",").c_str());
     }
 
     if (valid && !m_oids.objectReferenceExists(data.port_id))
@@ -7180,4 +7248,47 @@ void Meta::populate(
             m_attrKeys.insert(mKey, attrKey);
         }
     }
+}
+
+bool Meta::isPortObjectIdValid(
+        _In_ sai_object_type_t object_type)
+{
+    SWSS_LOG_ENTER();
+
+    auto members = sai_metadata_struct_members_sai_port_oper_status_notification_t;
+
+    for (size_t i = 0; members[i]; i++)
+    {
+        auto* mb = members[i];
+
+        if (mb->membername != std::string("port_id"))
+            continue;
+
+        for (size_t idx = 0; idx < mb->allowedobjecttypeslength; idx++)
+        {
+            if (mb->allowedobjecttypes[idx] == object_type)
+                return true;
+        }
+
+        return false;
+    }
+
+    SWSS_LOG_THROW("port_id member not found on sai_port_oper_status_notification");
+}
+
+std::vector<std::string> Meta::getValidPortObjectTypes()
+{
+    SWSS_LOG_ENTER();
+
+    auto md = sai_metadata_enum_sai_object_type_t;
+
+    std::vector<std::string> v;
+
+    for (size_t i = 0; i < md.valuescount; i++)
+    {
+        if (isPortObjectIdValid((sai_object_type_t)md.values[i]))
+            v.push_back(md.valuesshortnames[i]);
+    }
+
+    return v;
 }

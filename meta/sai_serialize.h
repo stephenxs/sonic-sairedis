@@ -72,6 +72,9 @@ std::string sai_serialize_fdb_entry(
 std::string sai_serialize_meter_bucket_entry(
         _In_ const sai_meter_bucket_entry_t &meter_bucket_entry);
 
+std::string sai_serialize_prefix_compression_entry(
+        _In_ const sai_prefix_compression_entry_t &prefix_compression_entry);
+
 std::string sai_serialize_flow_entry(
         _In_ const sai_flow_entry_t &flow_entry);
 
@@ -168,8 +171,17 @@ std::string sai_serialize_inbound_routing_entry(
 std::string sai_serialize_pa_validation_entry(
         _In_ const sai_pa_validation_entry_t &pa_validation_entry);
 
+std::string sai_serialize_outbound_port_map_port_range_entry(
+        _In_ const sai_outbound_port_map_port_range_entry_t &outbound_port_map_entry);
+
 std::string sai_serialize_outbound_routing_entry(
         _In_ const sai_outbound_routing_entry_t &outbound_routing_entry);
+
+std::string sai_serialize_global_trusted_vni_entry(
+        _In_ const sai_global_trusted_vni_entry_t &global_trusted_vni_entry);
+
+std::string sai_serialize_eni_trusted_vni_entry(
+        _In_ const sai_eni_trusted_vni_entry_t &eni_trusted_vni_entry);
 
 std::string sai_serialize_outbound_ca_to_pa_entry(
         _In_ const sai_outbound_ca_to_pa_entry_t &outbound_ca_to_pa_entry);
@@ -451,6 +463,10 @@ void sai_deserialize_meter_bucket_entry(
         _In_ const std::string& s,
         _Out_ sai_meter_bucket_entry_t& meter_bucket_entry);
 
+void sai_deserialize_prefix_compression_entry(
+        _In_ const std::string& s,
+        _Out_ sai_prefix_compression_entry_t& prefix_compression_entry);
+
 void sai_deserialize_flow_entry(
         _In_ const std::string& s,
         _Out_ sai_flow_entry_t &flow_entry);
@@ -479,9 +495,21 @@ void sai_deserialize_pa_validation_entry(
         _In_ const std::string &s,
         _Out_ sai_pa_validation_entry_t& pa_validation_entry);
 
+void sai_deserialize_outbound_port_map_port_range_entry(
+        _In_ const std::string &s,
+        _Out_ sai_outbound_port_map_port_range_entry_t &outbound_port_map_entry);
+
 void sai_deserialize_outbound_routing_entry(
         _In_ const std::string &s,
         _Out_ sai_outbound_routing_entry_t& outbound_routing_entry);
+
+void sai_deserialize_global_trusted_vni_entry(
+        _In_ const std::string &s,
+        _Out_ sai_global_trusted_vni_entry_t &global_trusted_vni_entry);
+
+void sai_deserialize_eni_trusted_vni_entry(
+        _In_ const std::string &s,
+        _Out_ sai_eni_trusted_vni_entry_t &eni_trusted_vni_entry);
 
 void sai_deserialize_outbound_ca_to_pa_entry(
         _In_ const std::string &s,

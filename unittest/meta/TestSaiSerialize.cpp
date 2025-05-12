@@ -1348,6 +1348,17 @@ TEST(SaiSerialize, serialize_number)
     EXPECT_EQ(u,   0x12345678);
 }
 
+TEST(SaiSerialize, sai_serialize_prefix_compression_entry)
+{
+    sai_prefix_compression_entry_t e;
+
+    memset(&e, 0, sizeof(e));
+
+    auto s = sai_serialize_prefix_compression_entry(e);
+
+    sai_deserialize_prefix_compression_entry(s, e);
+}
+
 TEST(SaiSerialize, serialize_stat_capability_list)
 {
     SWSS_LOG_ENTER();
@@ -1415,4 +1426,37 @@ TEST(SaiSerialize, serialize_stat_capability_list)
         is_expected_enum = true;
     }
     EXPECT_EQ(is_expected_enum, true);
+}
+
+TEST(SaiSerialize, sai_serialize_outbound_port_map_port_range_entry)
+{
+    sai_outbound_port_map_port_range_entry_t e;
+
+    memset(&e, 0, sizeof(e));
+
+    auto s = sai_serialize_outbound_port_map_port_range_entry(e);
+
+    sai_deserialize_outbound_port_map_port_range_entry(s, e);
+}
+
+TEST(SaiSerialize, sai_serialize_global_trusted_vni_entry)
+{
+    sai_global_trusted_vni_entry_t e;
+
+    memset(&e, 0, sizeof(e));
+
+    auto s = sai_serialize_global_trusted_vni_entry(e);
+
+    sai_deserialize_global_trusted_vni_entry(s, e);
+}
+
+TEST(SaiSerialize, sai_serialize_eni_trusted_vni_entry)
+{
+    sai_eni_trusted_vni_entry_t e;
+
+    memset(&e, 0, sizeof(e));
+
+    auto s = sai_serialize_eni_trusted_vni_entry(e);
+
+    sai_deserialize_eni_trusted_vni_entry(s, e);
 }
