@@ -53,9 +53,9 @@ VendorSai::VendorSai()
         .query_attribute_enum_values_capability = &sai_query_attribute_enum_values_capability,
         .query_object_stage = nullptr,
         .query_stats_capability = &sai_query_stats_capability,
-        .query_stats_st_capability = nullptr,
+        .query_stats_st_capability = &sai_query_stats_st_capability,
         .switch_id_query = &sai_switch_id_query,
-        .tam_telemetry_get_data = nullptr,
+        .tam_telemetry_get_data = &sai_tam_telemetry_get_data,
     };
 
     m_globalApis = ga;
