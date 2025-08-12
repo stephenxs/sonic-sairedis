@@ -224,9 +224,8 @@ TEST_F(VirtualSwitchSaiInterfaceTest, queryStatsCapability)
 
 TEST_F(VirtualSwitchSaiInterfaceTest, queryStatsStCapability)
 {
-    sai_stat_st_capability_t capability_list[91];
+    std::vector<sai_stat_st_capability_t> capability_list;
     sai_stat_st_capability_list_t stats_capability;
-    stats_capability.list = capability_list;
 
     /* Switch stats capability get */
     stats_capability.count = 0;
