@@ -8,6 +8,8 @@ tests_SOURCES = main.cpp \
                 MockableSaiInterface.cpp \
                 MockHelper.cpp \
 				TestAttrVersionChecker.cpp \
+				MockableSaiSwitchInterface.cpp \
+				TestBestCandidateFinder.cpp \
 				TestCommandLineOptions.cpp \
 				TestConcurrentQueue.cpp \
 				TestFlexCounter.cpp \
