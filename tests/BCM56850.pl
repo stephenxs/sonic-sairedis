@@ -876,9 +876,17 @@ sub test_port_bulk_get
     play "port_bulk_get.rec";
 }
 
+sub test_vxlan_default_router_mac
+{
+    fresh_start;
+
+    play "vxlan_default_router_mac.rec";
+}
+
 # RUN TESTS
 
 test_port_bulk_get
+test_vxlan_default_router_mac;
 test_neighbor_next_hop;
 test_acl_pre_match_999;
 test_relaxed;
